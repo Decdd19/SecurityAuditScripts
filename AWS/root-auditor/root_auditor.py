@@ -22,8 +22,12 @@ import json
 import csv
 import argparse
 import logging
+import os
 from datetime import datetime, timezone
+from botocore.config import Config
 from botocore.exceptions import ClientError
+
+BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -75,14 +79,25 @@ def calculate_score(no_mfa, active_root_keys, root_used_recently,
 # ── Checks ────────────────────────────────────────────────────────────────────
 
 def check_credential_report(iam):
-    """Generate and retrieve the IAM credential report."""
+    """Generate and retrieve the IAM credential report.
+
+    Warns if the report is stale (AWS caches reports for up to 4 hours).
+    """
+    import time
     try:
-        # Request generation
         iam.generate_credential_report()
-        import time
         for _ in range(10):
             try:
                 resp = iam.get_credential_report()
+                # Warn if report is older than 1 hour
+                generated_time = resp.get("GeneratedTime")
+                if generated_time:
+                    age_minutes = (NOW - generated_time).total_seconds() / 60
+                    if age_minutes > 60:
+                        log.warning(
+                            f"Credential report is {age_minutes:.0f} minutes old "
+                            f"(AWS caches up to 4h) — data may not reflect recent changes"
+                        )
                 content = resp["Content"].decode("utf-8")
                 lines = content.strip().split("\n")
                 headers = lines[0].split(",")
@@ -105,15 +120,25 @@ def check_credential_report(iam):
 
 def check_mfa_devices(iam):
     """Check if root has MFA enabled (virtual or hardware)."""
+    # Check for virtual MFA assigned to root
     try:
         resp = iam.list_virtual_mfa_devices(AssignmentStatus="Assigned")
         for device in resp.get("VirtualMFADevices", []):
             user = device.get("User", {})
             if user.get("Arn", "").endswith(":root"):
                 return True, "Virtual MFA"
-        return False, None
     except ClientError:
-        return False, None
+        pass
+
+    # Check account summary for hardware MFA (AccountMFAEnabled covers all types)
+    try:
+        summary = iam.get_account_summary()["SummaryMap"]
+        if summary.get("AccountMFAEnabled", 0) > 0:
+            return True, "Hardware MFA (or other)"
+    except ClientError:
+        pass
+
+    return False, None
 
 
 def check_root_access_keys(iam):
@@ -202,11 +227,11 @@ def check_support_plan(session):
 # ── Main audit ────────────────────────────────────────────────────────────────
 
 def audit_root(session):
-    iam = session.client("iam")
+    iam = session.client("iam", config=BOTO_CONFIG)
 
     account_id = None
     try:
-        sts = session.client("sts")
+        sts = session.client("sts", config=BOTO_CONFIG)
         account_id = sts.get_caller_identity()["Account"]
         log.info(f"Account ID: {account_id}")
     except ClientError:
@@ -318,9 +343,19 @@ def audit_root(session):
 
 # ── Output formatters ─────────────────────────────────────────────────────────
 
+def _mask_email(email):
+    """Mask most of an email address for safe display in reports."""
+    if not email or "@" not in email:
+        return "Configured"
+    local, domain = email.split("@", 1)
+    masked_local = local[:2] + "***" if len(local) > 2 else "***"
+    return f"{masked_local}@{domain}"
+
+
 def write_json(report, path):
     with open(path, "w") as f:
         json.dump(report, f, indent=2, default=str)
+    os.chmod(path, 0o600)
     log.info(f"JSON report: {path}")
 
 
@@ -344,6 +379,7 @@ def write_csv(findings, path):
         row.pop("password_policy", None)
         row.pop("alternate_contacts", None)
         writer.writerow(row)
+    os.chmod(path, 0o600)
     log.info(f"CSV report: {path}")
 
 
@@ -357,7 +393,7 @@ def write_html(report, path):
 
     contacts = f.get("alternate_contacts", {})
     contact_rows = "".join(
-        f'<tr><td>{k}</td><td>{"✅ " + v if v else "❌ Not configured"}</td></tr>'
+        f'<tr><td>{k}</td><td>{"✅ " + _mask_email(v) if v else "❌ Not configured"}</td></tr>'
         for k, v in contacts.items()
     )
 
@@ -426,13 +462,14 @@ def write_html(report, path):
 
     with open(path, "w") as fh:
         fh.write(html)
+    os.chmod(path, 0o600)
     log.info(f"HTML report: {path}")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def run(output_prefix="root_report", fmt="all", profile=None):
-    session = boto3.Session(profile_name=profile) if profile else boto3.Session()
+    session = boto3.Session(profile_name=profile) if profile else boto3.Session()  # noqa: E501
 
     log.info("Auditing root account security posture...")
     finding = audit_root(session)

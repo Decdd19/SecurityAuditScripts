@@ -22,8 +22,12 @@ import json
 import csv
 import argparse
 import logging
+import os
 from datetime import datetime, timezone
+from botocore.config import Config
 from botocore.exceptions import ClientError
+
+BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -86,14 +90,25 @@ def check_trail_logging(ct, trail_arn):
 def check_event_selectors(ct, trail_arn):
     try:
         resp = ct.get_event_selectors(TrailName=trail_arn)
+
+        # Check basic event selectors
         selectors = resp.get("EventSelectors", [])
-        has_management = any(
-            s.get("IncludeManagementEvents", False) for s in selectors
-        )
-        has_data = any(
-            len(s.get("DataResources", [])) > 0 for s in selectors
-        )
+        has_management = any(s.get("IncludeManagementEvents", False) for s in selectors)
+        has_data = any(len(s.get("DataResources", [])) > 0 for s in selectors)
         read_write = selectors[0].get("ReadWriteType", "Unknown") if selectors else "Unknown"
+
+        # Also check advanced event selectors (available since 2019)
+        advanced = resp.get("AdvancedEventSelectors", [])
+        if advanced:
+            for adv in advanced:
+                field_selectors = adv.get("FieldSelectors", [])
+                for fs in field_selectors:
+                    if fs.get("Field") == "eventCategory":
+                        if "Management" in fs.get("Equals", []):
+                            has_management = True
+                        if "Data" in fs.get("Equals", []):
+                            has_data = True
+
         return has_management, has_data, read_write
     except ClientError:
         return False, False, "Unknown"
@@ -223,6 +238,7 @@ def check_region_coverage(session):
 def write_json(report, path):
     with open(path, "w") as f:
         json.dump(report, f, indent=2, default=str)
+    os.chmod(path, 0o600)
     log.info(f"JSON report: {path}")
 
 
@@ -244,6 +260,7 @@ def write_csv(findings, path):
             row = finding.copy()
             row["flags"] = "; ".join(row.get("flags", []))
             writer.writerow(row)
+    os.chmod(path, 0o600)
     log.info(f"CSV report: {path}")
 
 
@@ -338,6 +355,7 @@ def write_html(report, path):
 
     with open(path, "w") as f:
         f.write(html)
+    os.chmod(path, 0o600)
     log.info(f"HTML report: {path}")
 
 
@@ -345,12 +363,12 @@ def write_html(report, path):
 
 def run(output_prefix="cloudtrail_report", fmt="all", profile=None):
     session = boto3.Session(profile_name=profile) if profile else boto3.Session()
-    ct = session.client("cloudtrail")
-    s3 = session.client("s3")
+    ct = session.client("cloudtrail", config=BOTO_CONFIG)
+    s3 = session.client("s3", config=BOTO_CONFIG)
 
     account_id = None
     try:
-        sts = session.client("sts")
+        sts = session.client("sts", config=BOTO_CONFIG)
         account_id = sts.get_caller_identity()["Account"]
         log.info(f"Account ID: {account_id}")
     except ClientError:
@@ -369,7 +387,7 @@ def run(output_prefix="cloudtrail_report", fmt="all", profile=None):
     findings = []
     for trail in trails:
         home_region = trail.get("HomeRegion", "us-east-1")
-        regional_ct = session.client("cloudtrail", region_name=home_region)
+        regional_ct = session.client("cloudtrail", region_name=home_region, config=BOTO_CONFIG)
         findings.append(analyse_trail(regional_ct, s3, trail))
 
     findings.sort(key=lambda x: x["severity_score"], reverse=True)

@@ -21,8 +21,12 @@ import json
 import csv
 import argparse
 import logging
+import os
 from datetime import datetime, timezone
+from botocore.config import Config
 from botocore.exceptions import ClientError
+
+BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -77,8 +81,11 @@ def check_public_access_block(s3, bucket):
         return config, all_blocked
     except ClientError as e:
         if e.response["Error"]["Code"] == "NoSuchPublicAccessBlockConfiguration":
+            # No block config set — treat as not blocked (security risk)
             return {}, False
-        return {}, False
+        # Unexpected API error — return None to signal unknown state
+        log.warning(f"Could not check Block Public Access for {bucket}: {e}")
+        return None, False
 
 
 def check_acl(s3, bucket):
@@ -94,6 +101,19 @@ def check_acl(s3, bucket):
         return False, None
 
 
+def _is_public_principal(principal):
+    """Return True if a policy principal grants public access."""
+    if principal == "*":
+        return True
+    if isinstance(principal, dict):
+        aws = principal.get("AWS", "")
+        if aws == "*":
+            return True
+        if isinstance(aws, list) and "*" in aws:
+            return True
+    return False
+
+
 def check_bucket_policy(s3, bucket):
     try:
         policy = s3.get_bucket_policy(Bucket=bucket)
@@ -104,7 +124,7 @@ def check_bucket_policy(s3, bucket):
             if stmt.get("Effect") != "Allow":
                 continue
             principal = stmt.get("Principal", "")
-            if principal == "*" or (isinstance(principal, dict) and principal.get("AWS") == "*"):
+            if _is_public_principal(principal):
                 actions = stmt.get("Action", [])
                 if isinstance(actions, str):
                     actions = [actions]
@@ -198,14 +218,17 @@ def analyse_bucket(s3, bucket_name):
     logging_on, log_target = check_logging(s3, bucket_name)
     has_lifecycle, lifecycle_count = check_lifecycle(s3, bucket_name)
 
+    block_check_failed = block_config is None
     is_public = acl_public or policy_public or not all_blocked
 
     flags = []
+    if block_check_failed:
+        flags.append("⚠️ Could not verify Block Public Access configuration (API error)")
     if acl_public:
         flags.append(f"⚠️ Public ACL ({acl_uri})")
     if policy_public:
         flags.append("⚠️ Public bucket policy")
-    if not all_blocked:
+    if not block_check_failed and not all_blocked:
         flags.append("⚠️ Block Public Access not fully enabled")
     if not encrypted:
         flags.append("⚠️ No encryption at rest")
@@ -253,6 +276,7 @@ def analyse_bucket(s3, bucket_name):
 def write_json(report, path):
     with open(path, "w") as f:
         json.dump(report, f, indent=2, default=str)
+    os.chmod(path, 0o600)
     log.info(f"JSON report: {path}")
 
 
@@ -277,6 +301,7 @@ def write_csv(findings, path):
                 row[field] = "; ".join(val) if isinstance(val, list) else (val or "")
             row.pop("block_public_access_config", None)
             writer.writerow(row)
+    os.chmod(path, 0o600)
     log.info(f"CSV report: {path}")
 
 
@@ -363,6 +388,7 @@ def write_html(report, path):
 
     with open(path, "w") as f:
         f.write(html)
+    os.chmod(path, 0o600)
     log.info(f"HTML report: {path}")
 
 
@@ -370,11 +396,11 @@ def write_html(report, path):
 
 def run(output_prefix="s3_report", fmt="all", profile=None):
     session = boto3.Session(profile_name=profile) if profile else boto3.Session()
-    s3 = session.client("s3")
+    s3 = session.client("s3", config=BOTO_CONFIG)
 
     account_id = None
     try:
-        sts = session.client("sts")
+        sts = session.client("sts", config=BOTO_CONFIG)
         account_id = sts.get_caller_identity()["Account"]
         log.info(f"Account ID: {account_id}")
     except ClientError:

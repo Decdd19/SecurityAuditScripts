@@ -18,13 +18,17 @@ Usage:
 """
 
 import boto3
+import html
 import json
 import csv
 import argparse
 import logging
 import os
 from datetime import datetime, timezone, timedelta
+from botocore.config import Config
 from botocore.exceptions import ClientError
+
+BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -180,21 +184,34 @@ def check_permission_boundary(iam, principal_type, name):
 # ── SCP helpers ───────────────────────────────────────────────────────────────
 
 def get_effective_scps(org_client, account_id):
-    """Return a set of denied actions from SCPs applied to this account."""
+    """Return a set of denied actions from SCPs applied to this account.
+
+    Note: Allow statements with Condition blocks are not fully modelled here.
+    SCPs with Allow+Condition may still restrict actions not listed as denied.
+    """
     denied = set()
     try:
-        policies = org_client.list_policies_for_target(
-            TargetId=account_id, Filter="SERVICE_CONTROL_POLICY"
-        )["Policies"]
+        paginator = org_client.get_paginator("list_policies_for_target")
+        policies = []
+        for page in paginator.paginate(TargetId=account_id, Filter="SERVICE_CONTROL_POLICY"):
+            policies.extend(page["Policies"])
         for p in policies:
             doc = org_client.describe_policy(PolicyId=p["Id"])["Policy"]["Content"]
             doc = json.loads(doc)
+            has_allow_with_condition = False
             for stmt in doc.get("Statement", []):
                 if stmt.get("Effect") == "Deny":
                     raw = stmt.get("Action", [])
                     if isinstance(raw, str):
                         raw = [raw]
                     denied.update(a.lower() for a in raw)
+                elif stmt.get("Effect") == "Allow" and stmt.get("Condition"):
+                    has_allow_with_condition = True
+            if has_allow_with_condition:
+                log.warning(
+                    f"SCP {p['Id']} has Allow+Condition statements — "
+                    "conditional restrictions are not fully modelled"
+                )
     except ClientError:
         pass
     return denied
@@ -480,6 +497,7 @@ def analyse_group(iam, group, scp_denied):
 def write_json(report, path):
     with open(path, "w") as f:
         json.dump(report, f, indent=2, default=str)
+    os.chmod(path, 0o600)
     log.info(f"JSON report: {path}")
 
 
@@ -505,6 +523,7 @@ def write_csv(findings, path):
                 val = row.get(field, [])
                 row[field] = "; ".join(val) if isinstance(val, list) else (val or "")
             writer.writerow(row)
+    os.chmod(path, 0o600)
     log.info(f"CSV report: {path}")
 
 
@@ -523,11 +542,12 @@ def write_html(report, path):
     rows = ""
     for f in findings:
         color = risk_colors.get(f["risk_level"], "#999")
-        privesc = "<br>".join(f.get("privilege_escalation_paths", [])) or "None"
-        high_risk = "<br>".join(f.get("high_risk_actions", [])[:5]) or "None"
-        if len(f.get("high_risk_actions", [])) > 5:
-            high_risk += f"<br>...+{len(f['high_risk_actions'])-5} more"
-        key_issues = "<br>".join(f.get("access_key_issues", [])) or "N/A"
+        privesc = "<br>".join(html.escape(p) for p in f.get("privilege_escalation_paths", [])) or "None"
+        high_risk_list = f.get("high_risk_actions", [])
+        high_risk = "<br>".join(html.escape(a) for a in high_risk_list[:5]) or "None"
+        if len(high_risk_list) > 5:
+            high_risk += f"<br>...+{len(high_risk_list)-5} more"
+        key_issues = "<br>".join(html.escape(k) for k in f.get("access_key_issues", [])) or "N/A"
         warnings = []
         if f.get("mfa_warning"):
             warnings.append("⚠️ No MFA")
@@ -538,14 +558,16 @@ def write_html(report, path):
         if f.get("permission_boundary"):
             warnings.append("✅ Boundary Set")
         warning_html = "<br>".join(warnings) or ""
+        name_escaped = html.escape(f["name"])
+        arn_escaped = html.escape(f["arn"])
 
         rows += f"""
         <tr>
             <td><span style="background:{color};color:white;padding:2px 8px;border-radius:4px;font-weight:bold">{f['risk_level']}</span></td>
             <td style="font-weight:bold">{f['severity_score']}/10</td>
             <td><span style="background:#2c3e50;color:white;padding:2px 6px;border-radius:3px;font-size:0.8em">{f['type'].upper()}</span></td>
-            <td>{f['name']}</td>
-            <td style="font-size:0.8em;color:#666">{f['arn']}</td>
+            <td>{name_escaped}</td>
+            <td style="font-size:0.8em;color:#666">{arn_escaped}</td>
             <td style="font-size:0.85em">{high_risk}</td>
             <td style="font-size:0.85em;color:#c0392b">{privesc}</td>
             <td style="font-size:0.85em">{key_issues}</td>
@@ -612,8 +634,9 @@ def write_html(report, path):
 </body>
 </html>"""
 
-    with open(path, "w") as f:
-        f.write(html)
+    with open(path, "w") as fh:
+        fh.write(html)
+    os.chmod(path, 0o600)
     log.info(f"HTML report: {path}")
 
 
@@ -636,17 +659,17 @@ def paginate(client_fn, key, **kwargs):
 
 def run(principal_type="all", output_prefix="iam_report", fmt="all", profile=None):
     session = boto3.Session(profile_name=profile) if profile else boto3.Session()
-    iam = session.client("iam")
+    iam = session.client("iam", config=BOTO_CONFIG)
 
     # Try to get account ID + SCPs
     scp_denied = set()
     account_id = None
     try:
-        sts = session.client("sts")
+        sts = session.client("sts", config=BOTO_CONFIG)
         account_id = sts.get_caller_identity()["Account"]
         log.info(f"Account ID: {account_id}")
         try:
-            org = session.client("organizations")
+            org = session.client("organizations", config=BOTO_CONFIG)
             scp_denied = get_effective_scps(org, account_id)
             if scp_denied:
                 log.info(f"SCP restrictions found: {len(scp_denied)} denied actions")

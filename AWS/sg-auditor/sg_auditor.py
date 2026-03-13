@@ -21,8 +21,12 @@ import json
 import csv
 import argparse
 import logging
+import os
 from datetime import datetime, timezone
+from botocore.config import Config
 from botocore.exceptions import ClientError
+
+BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -36,19 +40,23 @@ HIGH_RISK_PORTS = {
     3389:  "RDP",
     23:    "Telnet",
     21:    "FTP",
+    25:    "SMTP",
+    111:   "NFS/RPC",
+    135:   "RPC",
+    389:   "LDAP",
+    445:   "SMB",
+    636:   "LDAPS",
     1433:  "MSSQL",
     3306:  "MySQL",
     5432:  "PostgreSQL",
-    27017: "MongoDB",
+    5900:  "VNC",
     6379:  "Redis",
-    9200:  "Elasticsearch",
     2375:  "Docker (unencrypted)",
     2379:  "etcd",
     8080:  "HTTP Alt",
     8443:  "HTTPS Alt",
-    445:   "SMB",
-    135:   "RPC",
-    5900:  "VNC",
+    9200:  "Elasticsearch",
+    27017: "MongoDB",
 }
 
 OPEN_CIDRS = {"0.0.0.0/0", "::/0"}
@@ -230,6 +238,7 @@ def get_attached_resources(ec2):
 def write_json(report, path):
     with open(path, "w") as f:
         json.dump(report, f, indent=2, default=str)
+    os.chmod(path, 0o600)
     log.info(f"JSON report: {path}")
 
 
@@ -252,6 +261,7 @@ def write_csv(findings, path):
                 val = row.get(field, [])
                 row[field] = "; ".join(val) if isinstance(val, list) else (val or "")
             writer.writerow(row)
+    os.chmod(path, 0o600)
     log.info(f"CSV report: {path}")
 
 
@@ -339,6 +349,7 @@ def write_html(report, path):
 
     with open(path, "w") as f:
         f.write(html)
+    os.chmod(path, 0o600)
     log.info(f"HTML report: {path}")
 
 
@@ -349,7 +360,7 @@ def run(output_prefix="sg_report", fmt="all", profile=None, region=None):
 
     account_id = None
     try:
-        sts = session.client("sts")
+        sts = session.client("sts", config=BOTO_CONFIG)
         account_id = sts.get_caller_identity()["Account"]
         log.info(f"Account ID: {account_id}")
     except ClientError:
@@ -360,7 +371,7 @@ def run(output_prefix="sg_report", fmt="all", profile=None, region=None):
         regions = [region]
     else:
         try:
-            ec2_base = session.client("ec2", region_name="us-east-1")
+            ec2_base = session.client("ec2", region_name="us-east-1", config=BOTO_CONFIG)
             regions = [r["RegionName"] for r in ec2_base.describe_regions()["Regions"]]
         except ClientError:
             regions = ["us-east-1"]
@@ -370,7 +381,7 @@ def run(output_prefix="sg_report", fmt="all", profile=None, region=None):
     for r in regions:
         log.info(f"Region: {r}")
         try:
-            ec2 = session.client("ec2", region_name=r)
+            ec2 = session.client("ec2", region_name=r, config=BOTO_CONFIG)
             attached = get_attached_resources(ec2)
             paginator = ec2.get_paginator("describe_security_groups")
             for page in paginator.paginate():
