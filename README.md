@@ -1,5 +1,7 @@
 # ☁️ Cloud Audit Scripts
 
+[![CI](https://github.com/Decdd19/SecurityAuditScripts/actions/workflows/ci.yml/badge.svg)](https://github.com/Decdd19/SecurityAuditScripts/actions/workflows/ci.yml)
+
 A collection of security auditing scripts for AWS and other cloud platforms. Built for cloud security engineers, sysadmins, and anyone who wants visibility into their cloud environment without relying solely on commercial tooling.
 
 > **Purpose:** Practical, standalone scripts that give you real security insight. No agents, no SaaS dependencies — just run and review.
