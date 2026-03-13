@@ -30,7 +30,6 @@ $DangerousPorts = @{
     21    = @{ Service = 'FTP';           Score = 7 }
     22    = @{ Service = 'SSH';           Score = 9 }
     23    = @{ Service = 'Telnet';        Score = 9 }
-    25    = @{ Service = 'SMTP';          Score = 6 }
     389   = @{ Service = 'LDAP';          Score = 7 }
     445   = @{ Service = 'SMB';           Score = 9 }
     636   = @{ Service = 'LDAPS';         Score = 6 }
@@ -90,6 +89,7 @@ function Get-NsgFindings {
     )
     $findings = [System.Collections.Generic.List[PSCustomObject]]::new()
     $nsgs = Get-AzNetworkSecurityGroup
+    $script:_lastNsgCount = $nsgs.Count
 
     foreach ($nsg in $nsgs) {
         $base = @{
@@ -115,7 +115,10 @@ function Get-NsgFindings {
         # Rules open to internet on dangerous ports
         foreach ($rule in $nsg.SecurityRules) {
             if ($rule.Direction -ne 'Inbound' -or $rule.Access -ne 'Allow') { continue }
-            if ($rule.SourceAddressPrefix -notin $OpenSourcePrefixes) { continue }
+            $sourceOpen = ($rule.SourceAddressPrefix -in $OpenSourcePrefixes) -or
+                          (($rule.PSObject.Properties['SourceAddressPrefixes'] -ne $null) -and
+                           ($rule.SourceAddressPrefixes | Where-Object { $_ -in $OpenSourcePrefixes }))
+            if (-not $sourceOpen) { continue }
 
             $ports = @()
             if ($rule.DestinationPortRange -and $rule.DestinationPortRange -ne '*') {
@@ -263,6 +266,21 @@ function Write-TerminalSummary {
     Write-Host ''
 }
 
+function Set-RestrictedPermissions {
+    param([string]$Path)
+    if ($IsLinux -or $IsMacOS) {
+        & chmod 600 $Path
+    } else {
+        $acl = Get-Acl $Path
+        $acl.SetAccessRuleProtection($true, $false)
+        $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            [System.Security.Principal.WindowsIdentity]::GetCurrent().Name,
+            'FullControl', 'Allow')
+        $acl.SetAccessRule($rule)
+        Set-Acl -Path $Path -AclObject $acl
+    }
+}
+
 # ---------------------------------------------------------------------------
 # Main — skipped when dot-sourced (InvocationName is '.' when dot-sourced)
 # ---------------------------------------------------------------------------
@@ -295,7 +313,7 @@ if ($MyInvocation.InvocationName -ne '.') {
         Set-AzContext -SubscriptionId $sub.Id | Out-Null
         $subFindings = Get-NsgFindings -Subscription $sub
         $allFindings.AddRange([PSCustomObject[]]$subFindings)
-        $totalNsgs += (Get-AzNetworkSecurityGroup).Count
+        $totalNsgs += $script:_lastNsgCount
     }
 
     $timestamp  = Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC'
@@ -315,22 +333,28 @@ if ($MyInvocation.InvocationName -ne '.') {
     switch ($Format) {
         'json'   {
             $reportData | ConvertTo-Json -Depth 10 | Out-File "$Output.json" -Encoding UTF8
+            Set-RestrictedPermissions "$Output.json"
             Write-Host "JSON report: $Output.json"
         }
         'csv'    {
             ConvertTo-CsvReport $allFindings | Export-Csv "$Output.csv" -NoTypeInformation -Encoding UTF8
+            Set-RestrictedPermissions "$Output.csv"
             Write-Host "CSV report: $Output.csv"
         }
         'html'   {
             ConvertTo-HtmlReport -Findings $allFindings -TenantId $tenantId -ScannedAt $timestamp |
                 Out-File "$Output.html" -Encoding UTF8
+            Set-RestrictedPermissions "$Output.html"
             Write-Host "HTML report: $Output.html"
         }
         'all'    {
             $reportData | ConvertTo-Json -Depth 10 | Out-File "$Output.json" -Encoding UTF8
+            Set-RestrictedPermissions "$Output.json"
             ConvertTo-CsvReport $allFindings | Export-Csv "$Output.csv" -NoTypeInformation -Encoding UTF8
+            Set-RestrictedPermissions "$Output.csv"
             ConvertTo-HtmlReport -Findings $allFindings -TenantId $tenantId -ScannedAt $timestamp |
                 Out-File "$Output.html" -Encoding UTF8
+            Set-RestrictedPermissions "$Output.html"
             Write-Host "Reports: $Output.json  $Output.csv  $Output.html"
         }
         'stdout' { $reportData | ConvertTo-Json -Depth 10 }
