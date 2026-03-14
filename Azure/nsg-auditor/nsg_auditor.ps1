@@ -23,6 +23,7 @@ param(
 )
 
 Set-StrictMode -Version Latest
+Add-Type -AssemblyName System.Web
 
 # ---------------------------------------------------------------------------
 # Dangerous ports
@@ -124,7 +125,7 @@ function Get-NsgFindings {
             if ($rule.DestinationPortRange -and $rule.DestinationPortRange -ne '*') {
                 $ports += $rule.DestinationPortRange
             }
-            $ports += $rule.DestinationPortRanges
+            $ports += @($rule.DestinationPortRanges)
 
             foreach ($dangerousPort in $DangerousPorts.Keys) {
                 $matched = $false
