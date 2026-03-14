@@ -17,6 +17,7 @@
 #>
 param(
     [string]$Output          = 'nsg_report',
+    [ValidateSet('json','csv','html','all','stdout')]
     [string]$Format          = 'all',
     [switch]$AllSubscriptions
 )
@@ -88,8 +89,7 @@ function Get-NsgFindings {
         [Parameter(Mandatory)][PSCustomObject]$Subscription
     )
     $findings = [System.Collections.Generic.List[PSCustomObject]]::new()
-    $nsgs = Get-AzNetworkSecurityGroup
-    $script:_lastNsgCount = $nsgs.Count
+    $nsgs = @(Get-AzNetworkSecurityGroup)
 
     foreach ($nsg in $nsgs) {
         $base = @{
@@ -116,8 +116,8 @@ function Get-NsgFindings {
         foreach ($rule in $nsg.SecurityRules) {
             if ($rule.Direction -ne 'Inbound' -or $rule.Access -ne 'Allow') { continue }
             $sourceOpen = ($rule.SourceAddressPrefix -in $OpenSourcePrefixes) -or
-                          (($rule.PSObject.Properties['SourceAddressPrefixes'] -ne $null) -and
-                           ($rule.SourceAddressPrefixes | Where-Object { $_ -in $OpenSourcePrefixes }))
+                          (($null -ne $rule.PSObject.Properties['SourceAddressPrefixes']) -and
+                           ($null -ne $rule.SourceAddressPrefixes) -and ($rule.SourceAddressPrefixes | Where-Object { $_ -in $OpenSourcePrefixes }))
             if (-not $sourceOpen) { continue }
 
             $ports = @()
@@ -133,7 +133,7 @@ function Get-NsgFindings {
 
                 if (-not $matched) {
                     foreach ($portEntry in $ports) {
-                        if ($portEntry -eq "$dangerousPort") { $matched = $true; break }
+                        try { if ([int]$portEntry -eq $dangerousPort) { $matched = $true; break } } catch { }
                         if ($portEntry -match '^(\d+)-(\d+)$') {
                             if ($dangerousPort -ge [int]$Matches[1] -and $dangerousPort -le [int]$Matches[2]) {
                                 $matched = $true; break
@@ -173,7 +173,7 @@ function Get-NsgFindings {
             } + $base))
         }
     }
-    return $findings
+    return [PSCustomObject]@{ Findings = $findings; NsgCount = $nsgs.Count }
 }
 
 # ---------------------------------------------------------------------------
@@ -311,9 +311,9 @@ if ($MyInvocation.InvocationName -ne '.') {
     foreach ($sub in $subscriptions) {
         Write-Host "Scanning subscription: $($sub.Name) ($($sub.Id))" -ForegroundColor Gray
         Set-AzContext -SubscriptionId $sub.Id | Out-Null
-        $subFindings = Get-NsgFindings -Subscription $sub
-        $allFindings.AddRange([PSCustomObject[]]$subFindings)
-        $totalNsgs += $script:_lastNsgCount
+        $result = Get-NsgFindings -Subscription $sub
+        $allFindings.AddRange([PSCustomObject[]]$result.Findings)
+        $totalNsgs += $result.NsgCount
     }
 
     $timestamp  = Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC'
@@ -358,6 +358,7 @@ if ($MyInvocation.InvocationName -ne '.') {
             Write-Host "Reports: $Output.json  $Output.csv  $Output.html"
         }
         'stdout' { $reportData | ConvertTo-Json -Depth 10 }
+        default { Write-Error "Unknown format '$Format'"; exit 1 }
     }
 
     Write-TerminalSummary -Findings $allFindings -NsgsScanned $totalNsgs

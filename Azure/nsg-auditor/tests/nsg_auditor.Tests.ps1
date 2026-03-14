@@ -49,7 +49,8 @@ Describe 'Get-NsgFindings' {
 
     It 'flags RDP open to internet as CRITICAL or HIGH' {
         $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
-        $findings = Get-NsgFindings -Subscription $sub
+        $result = Get-NsgFindings -Subscription $sub
+        $findings = $result.Findings
         $rdpFinding = $findings | Where-Object { $_.Port -eq 3389 -and $_.NsgName -eq 'test-nsg' }
         $rdpFinding | Should -Not -BeNullOrEmpty
         $rdpFinding.Severity | Should -BeIn @('CRITICAL', 'HIGH')
@@ -57,7 +58,8 @@ Describe 'Get-NsgFindings' {
 
     It 'does not flag HTTPS restricted to specific IP' {
         $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
-        $findings = Get-NsgFindings -Subscription $sub
+        $result = Get-NsgFindings -Subscription $sub
+        $findings = $result.Findings
         $httpsFinding = $findings | Where-Object { $_.Port -eq 443 -and $_.NsgName -eq 'test-nsg' }
         $httpsFinding | Should -BeNullOrEmpty
     }
@@ -79,7 +81,8 @@ Describe 'Get-NsgFindings' {
         }
         Mock Get-AzNetworkSecurityGroup { @($nsgNoDeny) }
         $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
-        $findings = Get-NsgFindings -Subscription $sub
+        $result = Get-NsgFindings -Subscription $sub
+        $findings = $result.Findings
         $finding = $findings | Where-Object { $_.NsgName -eq 'nodeny-nsg' -and $_.FindingType -eq 'NoDenyRules' }
         $finding | Should -Not -BeNullOrEmpty
         $finding.Severity | Should -Be 'MEDIUM'
@@ -96,9 +99,45 @@ Describe 'Get-NsgFindings' {
         }
         Mock Get-AzNetworkSecurityGroup { @($orphanNsg) }
         $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
-        $findings = Get-NsgFindings -Subscription $sub
+        $result = Get-NsgFindings -Subscription $sub
+        $findings = $result.Findings
         $orphanFinding = $findings | Where-Object { $_.NsgName -eq 'orphan-nsg' -and $_.FindingType -eq 'Orphaned' }
         $orphanFinding | Should -Not -BeNullOrEmpty
+    }
+
+    It 'flags all dangerous ports when rule uses wildcard destination port' {
+        $wildcardRule = [PSCustomObject]@{
+            Name = 'allow-all'; Direction = 'Inbound'; Access = 'Allow'
+            SourceAddressPrefix = '0.0.0.0/0'; DestinationPortRange = '*'
+            DestinationPortRanges = @(); Priority = 100
+        }
+        $denyRule = [PSCustomObject]@{
+            Name = 'deny-all'; Direction = 'Inbound'; Access = 'Deny'
+            SourceAddressPrefix = '*'; DestinationPortRange = '*'
+            DestinationPortRanges = @(); Priority = 4096
+        }
+        $wildcardNsg = [PSCustomObject]@{
+            Name = 'wildcard-nsg'; ResourceGroupName = 'test-rg'
+            Id = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.Network/networkSecurityGroups/wildcard-nsg'
+            NetworkInterfaces = @()
+            Subnets = @([PSCustomObject]@{ Id = '/subs/sub-001/subnets/sub1' })
+            SecurityRules = @($wildcardRule, $denyRule)
+        }
+        Mock Get-AzNetworkSecurityGroup { @($wildcardNsg) }
+        $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
+        $result = Get-NsgFindings -Subscription $sub
+        $findings = $result.Findings
+        $rdp = $findings | Where-Object { $_.Port -eq 3389 }
+        $rdp | Should -Not -BeNullOrEmpty
+        $rdp.Severity | Should -BeIn @('CRITICAL', 'HIGH')
+    }
+
+    It 'returns empty findings and NsgCount 0 for subscription with no NSGs' {
+        Mock Get-AzNetworkSecurityGroup { @() }
+        $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
+        $result = Get-NsgFindings -Subscription $sub
+        $result.Findings | Should -BeNullOrEmpty
+        $result.NsgCount | Should -Be 0
     }
 }
 
