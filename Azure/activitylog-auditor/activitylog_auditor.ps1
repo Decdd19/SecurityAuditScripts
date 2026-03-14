@@ -34,9 +34,10 @@ $RequiredCategories = @('Administrative', 'Security', 'Policy', 'Alert')
 # ---------------------------------------------------------------------------
 # Az stubs — overridden by real Az module at runtime; Pester Mocks these
 # ---------------------------------------------------------------------------
-if (-not (Get-Command Get-AzDiagnosticSetting -ErrorAction SilentlyContinue)) {
+if (-not (Get-Command -Name 'Get-AzDiagnosticSetting' -ErrorAction SilentlyContinue)) {
     function Get-AzDiagnosticSetting { param($ResourceId) @() }
     function Get-AzActivityLogAlert { @() }
+    function Get-AzOperationalInsightsWorkspace { param($ResourceGroupName, $Name) $null }
 }
 
 # ---------------------------------------------------------------------------
@@ -134,12 +135,12 @@ function Get-ActivityLogFindings {
                 foreach ($log in $diag.Logs) {
                     if ($null -ne $log.RetentionPolicy -and $log.RetentionPolicy.Enabled) {
                         $days = $log.RetentionPolicy.Days
-                        if ($null -eq $minDays -or $days -lt $minDays) {
+                        if ($days -ne 0 -and ($null -eq $minDays -or $days -lt $minDays)) {
                             $minDays = $days
                         }
                     }
                 }
-                if ($null -ne $minDays -and $minDays -lt 90) {
+                if ($null -ne $minDays -and $minDays -ne 0 -and $minDays -lt 90) {
                     $findings.Add([PSCustomObject](@{
                         FindingType    = 'ShortRetention'
                         DiagSettingName = $diag.Name
@@ -148,6 +149,32 @@ function Get-ActivityLogFindings {
                         Severity       = 'MEDIUM'
                         Recommendation = "Increase retention to at least 90 days on the storage account destination in diagnostic setting '$($diag.Name)'."
                     } + $base))
+                }
+            }
+
+            # Log Analytics workspace retention check (best-effort)
+            if ($hasWorkspace) {
+                $workspaceId = $diag.WorkspaceId
+                try {
+                    if (Get-Command Get-AzOperationalInsightsWorkspace -ErrorAction SilentlyContinue) {
+                        # Parse workspace resource group and name from the resource ID
+                        if ($workspaceId -match '/resourceGroups/([^/]+)/providers/Microsoft\.OperationalInsights/workspaces/([^/]+)') {
+                            $wsRg   = $Matches[1]
+                            $wsName = $Matches[2]
+                            $workspace = Get-AzOperationalInsightsWorkspace -ResourceGroupName $wsRg -Name $wsName -ErrorAction SilentlyContinue
+                            if ($workspace -and $workspace.retentionInDays -lt 90) {
+                                $findings.Add([PSCustomObject](@{
+                                    FindingType    = 'WorkspaceRetentionShort'
+                                    Detail         = "Log Analytics workspace '$wsName' retention is $($workspace.retentionInDays) days (minimum 90)"
+                                    Score          = 4
+                                    Severity       = (Get-SeverityLabel 4)
+                                    Recommendation = "Increase the retention period of Log Analytics workspace '$wsName' to at least 90 days."
+                                } + $base))
+                            }
+                        }
+                    }
+                } catch {
+                    Write-Warning "Could not check Log Analytics workspace retention for '$workspaceId': $_"
                 }
             }
 
