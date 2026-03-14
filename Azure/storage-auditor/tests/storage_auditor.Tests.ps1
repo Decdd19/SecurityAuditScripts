@@ -129,18 +129,111 @@ Describe 'Get-StorageFindings' {
             }
             SasPolicy              = [PSCustomObject]@{
                 ExpirationAction = 'Log'
-                SasExpirationPeriod = '30.00:00:00'
+                SasExpirationPeriod = '1.00:00:00'
             }
         }
         Mock Get-AzStorageAccount { @($account) }
         Mock New-AzStorageContext { [PSCustomObject]@{ StorageAccountName = 'securestore' } }
         Mock Get-AzStorageBlobServiceProperty {
-            [PSCustomObject]@{ DeleteRetentionPolicy = [PSCustomObject]@{ Enabled = $true; Days = 7 } }
+            [PSCustomObject]@{ DeleteRetentionPolicy = [PSCustomObject]@{ Enabled = $true; Days = 7 }; IsVersioningEnabled = $true }
         }
         Mock Get-AzDiagnosticSetting { @([PSCustomObject]@{ Name = 'default' }) }
         $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
         $result = Get-StorageFindings -Subscription $sub
         $result.Findings | Should -BeNullOrEmpty
+    }
+
+    It 'flags storage account with no diagnostic logging configured' {
+        $account = [PSCustomObject]@{
+            StorageAccountName    = 'nodiagstore'
+            ResourceGroupName     = 'test-rg'
+            AllowBlobPublicAccess  = $false
+            AllowSharedKeyAccess   = $false
+            EnableHttpsTrafficOnly = $true
+            Id                     = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.Storage/storageAccounts/nodiagstore'
+            SasPolicy              = [PSCustomObject]@{ ExpirationAction = 'Log'; SasExpirationPeriod = '1.00:00:00' }
+            Encryption             = [PSCustomObject]@{
+                KeySource = 'Microsoft.Keyvault'
+                RequireInfrastructureEncryption = $true
+            }
+        }
+        Mock Get-AzStorageAccount { @($account) }
+        Mock New-AzStorageContext { [PSCustomObject]@{ StorageAccountName = 'nodiagstore' } }
+        Mock Get-AzStorageBlobServiceProperty {
+            [PSCustomObject]@{
+                DeleteRetentionPolicy = [PSCustomObject]@{ Enabled = $true; Days = 7 }
+                IsVersioningEnabled   = $true
+            }
+        }
+        Mock Get-AzDiagnosticSetting { @() }  # No diagnostic settings
+
+        $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
+        $result = Get-StorageFindings -Subscription $sub
+        $finding = $result.Findings | Where-Object { $_.AccountName -eq 'nodiagstore' -and $_.FindingType -eq 'NoDiagnosticLogging' }
+        $finding | Should -Not -BeNullOrEmpty
+        $finding.Severity | Should -Be 'MEDIUM'
+    }
+
+    It 'flags storage account with versioning disabled' {
+        $account = [PSCustomObject]@{
+            StorageAccountName    = 'noversionstore'
+            ResourceGroupName     = 'test-rg'
+            AllowBlobPublicAccess  = $false
+            AllowSharedKeyAccess   = $false
+            EnableHttpsTrafficOnly = $true
+            Id                     = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.Storage/storageAccounts/noversionstore'
+            SasPolicy              = [PSCustomObject]@{ ExpirationAction = 'Log'; SasExpirationPeriod = '1.00:00:00' }
+            Encryption             = [PSCustomObject]@{
+                KeySource = 'Microsoft.Keyvault'
+                RequireInfrastructureEncryption = $true
+            }
+        }
+        Mock Get-AzStorageAccount { @($account) }
+        Mock New-AzStorageContext { [PSCustomObject]@{ StorageAccountName = 'noversionstore' } }
+        Mock Get-AzStorageBlobServiceProperty {
+            [PSCustomObject]@{
+                DeleteRetentionPolicy = [PSCustomObject]@{ Enabled = $true; Days = 7 }
+                IsVersioningEnabled   = $false
+            }
+        }
+        Mock Get-AzDiagnosticSetting { @([PSCustomObject]@{ Name = 'default' }) }
+
+        $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
+        $result = Get-StorageFindings -Subscription $sub
+        $finding = $result.Findings | Where-Object { $_.AccountName -eq 'noversionstore' -and $_.FindingType -eq 'VersioningDisabled' }
+        $finding | Should -Not -BeNullOrEmpty
+        $finding.Severity | Should -Be 'MEDIUM'
+    }
+
+    It 'flags storage account with no SAS expiry policy' {
+        $account = [PSCustomObject]@{
+            StorageAccountName    = 'nosaspolicystore'
+            ResourceGroupName     = 'test-rg'
+            AllowBlobPublicAccess  = $false
+            AllowSharedKeyAccess   = $false
+            EnableHttpsTrafficOnly = $true
+            Id                     = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.Storage/storageAccounts/nosaspolicystore'
+            SasPolicy              = $null
+            Encryption             = [PSCustomObject]@{
+                KeySource = 'Microsoft.Keyvault'
+                RequireInfrastructureEncryption = $true
+            }
+        }
+        Mock Get-AzStorageAccount { @($account) }
+        Mock New-AzStorageContext { [PSCustomObject]@{ StorageAccountName = 'nosaspolicystore' } }
+        Mock Get-AzStorageBlobServiceProperty {
+            [PSCustomObject]@{
+                DeleteRetentionPolicy = [PSCustomObject]@{ Enabled = $true; Days = 7 }
+                IsVersioningEnabled   = $true
+            }
+        }
+        Mock Get-AzDiagnosticSetting { @([PSCustomObject]@{ Name = 'default' }) }
+
+        $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
+        $result = Get-StorageFindings -Subscription $sub
+        $finding = $result.Findings | Where-Object { $_.AccountName -eq 'nosaspolicystore' -and $_.FindingType -eq 'NoSasExpiryPolicy' }
+        $finding | Should -Not -BeNullOrEmpty
+        $finding.Severity | Should -Be 'LOW'
     }
 
     It 'returns empty findings and AccountCount 0 for subscription with no storage accounts' {
