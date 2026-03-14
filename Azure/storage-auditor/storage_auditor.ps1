@@ -32,6 +32,7 @@ if (-not (Get-Command -Name 'Get-AzStorageAccount' -ErrorAction SilentlyContinue
     function Get-AzStorageAccount { @() }
     function New-AzStorageContext { [PSCustomObject]@{} }
     function Get-AzStorageBlobServiceProperty { [PSCustomObject]@{ DeleteRetentionPolicy = [PSCustomObject]@{ Enabled = $true; Days = 7 } } }
+    function Get-AzDiagnosticSetting { param($ResourceId) @() }
 }
 
 # ---------------------------------------------------------------------------
@@ -72,10 +73,11 @@ function Get-StorageFindings {
             ResourceGroup  = $account.ResourceGroupName
             Subscription   = $Subscription.Name
             SubscriptionId = $Subscription.Id
+            Id             = $account.Id
         }
 
         # 1. Public blob access
-        if ($account.AllowBlobPublicAccess -eq $true) {
+        if ($account.AllowBlobPublicAccess -ne $false) {
             $findings.Add([PSCustomObject](@{
                 FindingType    = 'PublicBlobAccess'
                 Score          = 9
@@ -85,7 +87,7 @@ function Get-StorageFindings {
         }
 
         # 2. Shared key access
-        if ($account.AllowSharedKeyAccess -eq $true) {
+        if ($account.AllowSharedKeyAccess -ne $false) {
             $findings.Add([PSCustomObject](@{
                 FindingType    = 'SharedKeyAccess'
                 Score          = 7
@@ -115,19 +117,62 @@ function Get-StorageFindings {
         }
 
         # 5. Blob soft delete
+        $blobProps = $null
         try {
-            $ctx = New-AzStorageContext -StorageAccountName $account.StorageAccountName -UseConnectedAccount
-            $blobProps = Get-AzStorageBlobServiceProperty -Context $ctx
-            if ($blobProps.DeleteRetentionPolicy.Enabled -ne $true) {
-                $findings.Add([PSCustomObject](@{
-                    FindingType    = 'SoftDeleteDisabled'
-                    Score          = 4
-                    Severity       = 'MEDIUM'
-                    Recommendation = "Enable blob soft delete on '$($account.StorageAccountName)' to protect against accidental or malicious deletion."
-                } + $base))
-            }
+            $storageCtx = New-AzStorageContext -StorageAccountName $account.StorageAccountName -UseConnectedAccount
+            $blobProps = Get-AzStorageBlobServiceProperty -Context $storageCtx
         } catch {
-            # Skip on error (e.g., insufficient permissions)
+            Write-Warning "Could not retrieve blob service properties for '$($account.StorageAccountName)': $_"
+        }
+
+        if ($null -ne $blobProps -and $blobProps.DeleteRetentionPolicy.Enabled -ne $true) {
+            $findings.Add([PSCustomObject](@{
+                FindingType    = 'SoftDeleteDisabled'
+                Score          = 4
+                Severity       = (Get-SeverityLabel 4)
+                Recommendation = "Enable blob soft delete on '$($account.StorageAccountName)' to allow recovery from accidental deletions."
+            } + $base))
+        }
+
+        # 6. Versioning disabled
+        if ($null -ne $blobProps -and $blobProps.PSObject.Properties['IsVersioningEnabled'] -and
+            $blobProps.IsVersioningEnabled -ne $true) {
+            $findings.Add([PSCustomObject](@{
+                FindingType    = 'VersioningDisabled'
+                Score          = 3
+                Severity       = (Get-SeverityLabel 3)
+                Recommendation = "Enable blob versioning on '$($account.StorageAccountName)' to protect against accidental overwrites."
+            } + $base))
+        }
+
+        # 7. No SAS expiry policy
+        $sasPolicy = $account.PSObject.Properties['SasPolicy']
+        if ($null -eq $sasPolicy -or $null -eq $account.SasPolicy -or
+            $null -eq $account.SasPolicy.ExpirationAction) {
+            $findings.Add([PSCustomObject](@{
+                FindingType    = 'NoSasExpiryPolicy'
+                Score          = 2
+                Severity       = (Get-SeverityLabel 2)
+                Recommendation = "Configure a SAS expiry policy on '$($account.StorageAccountName)' to enforce maximum SAS token lifetime."
+            } + $base))
+        }
+
+        # 8. No diagnostic logging
+        $resourceId = $account.Id
+        if ($resourceId) {
+            try {
+                $diagSettings = Get-AzDiagnosticSetting -ResourceId $resourceId -ErrorAction SilentlyContinue
+                if (-not $diagSettings) {
+                    $findings.Add([PSCustomObject](@{
+                        FindingType    = 'NoDiagnosticLogging'
+                        Score          = 3
+                        Severity       = (Get-SeverityLabel 3)
+                        Recommendation = "Storage account '$($account.StorageAccountName)' has no diagnostic settings. Enable logging to capture read/write/delete operations."
+                    } + $base))
+                }
+            } catch {
+                Write-Warning "Could not retrieve diagnostic settings for '$($account.StorageAccountName)': $_"
+            }
         }
     }
 
