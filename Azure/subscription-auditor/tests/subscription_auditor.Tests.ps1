@@ -122,6 +122,35 @@ Describe 'Get-SubscriptionFindings' {
         $finding.Severity | Should -Be 'LOW'
     }
 
+    It 'flags more than 5 Global Administrators as MEDIUM' {
+        Mock Get-AzSecurityPricing {
+            @([PSCustomObject]@{ Name = 'VirtualMachines'; PricingTier = 'Standard' })
+        }
+        Mock Get-AzRoleAssignment { @() }
+        Mock Get-AzResourceLock { @([PSCustomObject]@{ LockId = 'lock1' }) }
+        Mock Get-AzConsumptionBudget { @([PSCustomObject]@{ Name = 'budget1' }) }
+        # 6 Global Admin assignments
+        Mock Get-MgRoleManagementDirectoryRoleAssignment {
+            1..6 | ForEach-Object {
+                [PSCustomObject]@{
+                    PrincipalId = "ga-00$_"
+                    Principal   = [PSCustomObject]@{ DisplayName = "Admin$_"; UserPrincipalName = "admin$_@contoso.com" }
+                }
+            }
+        }
+        Mock Get-MgUserAuthenticationMethod {
+            # All admins have MFA (FIDO2 method)
+            @([PSCustomObject]@{ AdditionalProperties = @{ '@odata.type' = '#microsoft.graph.fido2AuthenticationMethod' } })
+        }
+        Mock Get-MgRoleManagementDirectoryRoleEligibilitySchedule { @() }
+
+        $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
+        $result = Get-SubscriptionFindings -Subscription $sub
+        $finding = $result.Findings | Where-Object { $_.FindingType -eq 'TooManyGlobalAdmins' }
+        $finding | Should -Not -BeNullOrEmpty
+        $finding.Severity | Should -Be 'MEDIUM'
+    }
+
     It 'flags Global Admin without MFA as CRITICAL' {
         Mock Get-AzSecurityPricing {
             @([PSCustomObject]@{ Name = 'VirtualMachines'; PricingTier = 'Standard' })

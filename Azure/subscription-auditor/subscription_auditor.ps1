@@ -35,9 +35,9 @@ if (-not (Get-Command -Name 'Get-AzSecurityPricing' -ErrorAction SilentlyContinu
     function Get-AzRoleAssignment { param($Scope) @() }
     function Get-AzResourceLock { @() }
     function Get-AzConsumptionBudget { @() }
-    function Get-MgRoleManagementDirectoryRoleAssignment { param($Filter) @() }
+    function Get-MgRoleManagementDirectoryRoleAssignment { param($Filter, [switch]$All) @() }
     function Get-MgUserAuthenticationMethod { param($UserId) @() }
-    function Get-MgRoleManagementDirectoryRoleEligibilitySchedule { @() }
+    function Get-MgRoleManagementDirectoryRoleEligibilitySchedule { param([switch]$All) @() }
 }
 
 # ---------------------------------------------------------------------------
@@ -90,8 +90,9 @@ function Get-SubscriptionFindings {
     # ------------------------------------------------------------------
     # 2. Permanent Owner/Contributor assignments without PIM
     # ------------------------------------------------------------------
-    $roleAssignments = Get-AzRoleAssignment -Scope "/subscriptions/$($Subscription.Id)"
-    $eligibleAssignments = @(Get-MgRoleManagementDirectoryRoleEligibilitySchedule -ErrorAction SilentlyContinue)
+    $roleAssignments = Get-AzRoleAssignment -Scope "/subscriptions/$($Subscription.Id)" |
+        Where-Object { $_.Scope -eq "/subscriptions/$($Subscription.Id)" }
+    $eligibleAssignments = @(Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ErrorAction SilentlyContinue)
     $eligibleIds = $eligibleAssignments | ForEach-Object { $_.PrincipalId }
 
     foreach ($assignment in $roleAssignments) {
@@ -111,7 +112,7 @@ function Get-SubscriptionFindings {
     # 3. Global Administrator hygiene (count + MFA)
     # ------------------------------------------------------------------
     $globalAdminRoleId = '62e90394-69f5-4237-9190-012177145e10'
-    $globalAdmins = @(Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$globalAdminRoleId'" -ErrorAction SilentlyContinue)
+    $globalAdmins = @(Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$globalAdminRoleId'" -All -ErrorAction SilentlyContinue)
 
     if ($globalAdmins.Count -gt 5) {
         $findings.Add([PSCustomObject](@{
@@ -129,6 +130,7 @@ function Get-SubscriptionFindings {
         try {
             $methods = @(Get-MgUserAuthenticationMethod -UserId $principalId -ErrorAction SilentlyContinue)
             $hasMfa = $methods | Where-Object {
+                $null -ne $_.AdditionalProperties -and
                 $_.AdditionalProperties['@odata.type'] -notin @(
                     '#microsoft.graph.passwordAuthenticationMethod',
                     $null
