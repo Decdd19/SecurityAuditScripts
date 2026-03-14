@@ -107,6 +107,29 @@ Describe 'Get-ActivityLogFindings' {
         $finding.Severity | Should -Be 'MEDIUM'
     }
 
+    It 'flags Event Hub destination as RetentionUnverifiable (LOW)' {
+        $diagSetting = [PSCustomObject]@{
+            Name             = 'eventhub-diag'
+            WorkspaceId      = $null
+            StorageAccountId = $null
+            EventHubName     = 'myEventHub'
+            Logs             = @(
+                [PSCustomObject]@{ Category = 'Administrative'; Enabled = $true; RetentionPolicy = [PSCustomObject]@{ Days = 90; Enabled = $true } }
+                [PSCustomObject]@{ Category = 'Security';       Enabled = $true; RetentionPolicy = [PSCustomObject]@{ Days = 90; Enabled = $true } }
+                [PSCustomObject]@{ Category = 'Policy';         Enabled = $true; RetentionPolicy = [PSCustomObject]@{ Days = 90; Enabled = $true } }
+                [PSCustomObject]@{ Category = 'Alert';          Enabled = $true; RetentionPolicy = [PSCustomObject]@{ Days = 90; Enabled = $true } }
+            )
+        }
+        Mock Get-AzDiagnosticSetting { @($diagSetting) }
+        Mock Get-AzActivityLogAlert { @([PSCustomObject]@{ Name = 'alert1' }) }
+
+        $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
+        $result = Get-ActivityLogFindings -Subscription $sub
+        $finding = $result.Findings | Where-Object { $_.FindingType -eq 'RetentionUnverifiable' }
+        $finding | Should -Not -BeNullOrEmpty
+        $finding.Severity | Should -Be 'LOW'
+    }
+
     It 'returns empty findings for fully compliant subscription' {
         $diagSetting = [PSCustomObject]@{
             Name             = 'compliant-diag'
