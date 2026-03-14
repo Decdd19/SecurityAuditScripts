@@ -5,6 +5,7 @@ BeforeAll {
     function Get-AzStorageAccount { @() }
     function New-AzStorageContext { [PSCustomObject]@{} }
     function Get-AzStorageBlobServiceProperty { [PSCustomObject]@{ DeleteRetentionPolicy = [PSCustomObject]@{ Enabled = $true; Days = 7 } } }
+    function Get-AzDiagnosticSetting { param($ResourceId) @([PSCustomObject]@{ Name = 'default' }) }
 
     . "$PSScriptRoot/../storage_auditor.ps1"
 }
@@ -17,10 +18,12 @@ Describe 'Get-StorageFindings' {
             AllowBlobPublicAccess  = $true
             AllowSharedKeyAccess   = $false
             EnableHttpsTrafficOnly = $true
+            Id                     = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.Storage/storageAccounts/publicstore'
             Encryption             = [PSCustomObject]@{
                 KeySource = 'Microsoft.Storage'
                 RequireInfrastructureEncryption = $false
             }
+            SasPolicy              = [PSCustomObject]@{ ExpirationAction = 'Log'; SasExpirationPeriod = '30.00:00:00' }
         }
         Mock Get-AzStorageAccount { @($account) }
         Mock New-AzStorageContext { [PSCustomObject]@{ StorageAccountName = 'publicstore' } }
@@ -31,7 +34,7 @@ Describe 'Get-StorageFindings' {
         $result = Get-StorageFindings -Subscription $sub
         $finding = $result.Findings | Where-Object { $_.AccountName -eq 'publicstore' -and $_.FindingType -eq 'PublicBlobAccess' }
         $finding | Should -Not -BeNullOrEmpty
-        $finding.Severity | Should -BeIn @('CRITICAL', 'HIGH')
+        $finding.Severity | Should -Be 'CRITICAL'
     }
 
     It 'flags storage account with shared key access enabled' {
@@ -41,10 +44,12 @@ Describe 'Get-StorageFindings' {
             AllowBlobPublicAccess  = $false
             AllowSharedKeyAccess   = $true
             EnableHttpsTrafficOnly = $true
+            Id                     = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.Storage/storageAccounts/sharedkeystore'
             Encryption             = [PSCustomObject]@{
                 KeySource = 'Microsoft.Storage'
                 RequireInfrastructureEncryption = $false
             }
+            SasPolicy              = [PSCustomObject]@{ ExpirationAction = 'Log'; SasExpirationPeriod = '30.00:00:00' }
         }
         Mock Get-AzStorageAccount { @($account) }
         Mock New-AzStorageContext { [PSCustomObject]@{ StorageAccountName = 'sharedkeystore' } }
@@ -65,10 +70,12 @@ Describe 'Get-StorageFindings' {
             AllowBlobPublicAccess  = $false
             AllowSharedKeyAccess   = $false
             EnableHttpsTrafficOnly = $true
+            Id                     = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.Storage/storageAccounts/nokmstore'
             Encryption             = [PSCustomObject]@{
                 KeySource = 'Microsoft.Storage'
                 RequireInfrastructureEncryption = $false
             }
+            SasPolicy              = [PSCustomObject]@{ ExpirationAction = 'Log'; SasExpirationPeriod = '30.00:00:00' }
         }
         Mock Get-AzStorageAccount { @($account) }
         Mock New-AzStorageContext { [PSCustomObject]@{ StorageAccountName = 'nokmstore' } }
@@ -89,10 +96,12 @@ Describe 'Get-StorageFindings' {
             AllowBlobPublicAccess  = $false
             AllowSharedKeyAccess   = $false
             EnableHttpsTrafficOnly = $true
+            Id                     = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.Storage/storageAccounts/nosoftdelete'
             Encryption             = [PSCustomObject]@{
                 KeySource = 'Microsoft.Keyvault'
                 RequireInfrastructureEncryption = $true
             }
+            SasPolicy              = [PSCustomObject]@{ ExpirationAction = 'Log'; SasExpirationPeriod = '30.00:00:00' }
         }
         Mock Get-AzStorageAccount { @($account) }
         Mock New-AzStorageContext { [PSCustomObject]@{ StorageAccountName = 'nosoftdelete' } }
@@ -113,9 +122,14 @@ Describe 'Get-StorageFindings' {
             AllowBlobPublicAccess  = $false
             AllowSharedKeyAccess   = $false
             EnableHttpsTrafficOnly = $true
+            Id                     = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.Storage/storageAccounts/securestore'
             Encryption             = [PSCustomObject]@{
                 KeySource = 'Microsoft.Keyvault'
                 RequireInfrastructureEncryption = $true
+            }
+            SasPolicy              = [PSCustomObject]@{
+                ExpirationAction = 'Log'
+                SasExpirationPeriod = '30.00:00:00'
             }
         }
         Mock Get-AzStorageAccount { @($account) }
@@ -123,6 +137,7 @@ Describe 'Get-StorageFindings' {
         Mock Get-AzStorageBlobServiceProperty {
             [PSCustomObject]@{ DeleteRetentionPolicy = [PSCustomObject]@{ Enabled = $true; Days = 7 } }
         }
+        Mock Get-AzDiagnosticSetting { @([PSCustomObject]@{ Name = 'default' }) }
         $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
         $result = Get-StorageFindings -Subscription $sub
         $result.Findings | Should -BeNullOrEmpty
