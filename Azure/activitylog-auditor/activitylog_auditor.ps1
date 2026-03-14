@@ -165,6 +165,7 @@ function Get-ActivityLogFindings {
                             if ($workspace -and $workspace.retentionInDays -lt 90) {
                                 $findings.Add([PSCustomObject](@{
                                     FindingType    = 'WorkspaceRetentionShort'
+                                    DiagSettingName = $diag.Name
                                     Detail         = "Log Analytics workspace '$wsName' retention is $($workspace.retentionInDays) days (minimum 90)"
                                     Score          = 4
                                     Severity       = (Get-SeverityLabel 4)

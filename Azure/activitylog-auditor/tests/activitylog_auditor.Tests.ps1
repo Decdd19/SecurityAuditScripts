@@ -4,6 +4,7 @@ BeforeAll {
     function Set-AzContext { }
     function Get-AzDiagnosticSetting { @() }
     function Get-AzActivityLogAlert { @() }
+    function Get-AzOperationalInsightsWorkspace { param($ResourceGroupName, $Name) $null }
 
     . "$PSScriptRoot/../activitylog_auditor.ps1"
 }
@@ -149,6 +150,32 @@ Describe 'Get-ActivityLogFindings' {
         $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
         $result = Get-ActivityLogFindings -Subscription $sub
         $result.Findings | Should -BeNullOrEmpty
+    }
+
+    It 'flags Log Analytics workspace with retention under 90 days' {
+        $diagSetting = [PSCustomObject]@{
+            Name             = 'ws-diag'
+            WorkspaceId      = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.OperationalInsights/workspaces/test-ws'
+            StorageAccountId = $null
+            EventHubName     = $null
+            Logs             = @(
+                [PSCustomObject]@{ Category = 'Administrative'; Enabled = $true; RetentionPolicy = [PSCustomObject]@{ Days = 90; Enabled = $true } }
+                [PSCustomObject]@{ Category = 'Security';       Enabled = $true; RetentionPolicy = [PSCustomObject]@{ Days = 90; Enabled = $true } }
+                [PSCustomObject]@{ Category = 'Policy';         Enabled = $true; RetentionPolicy = [PSCustomObject]@{ Days = 90; Enabled = $true } }
+                [PSCustomObject]@{ Category = 'Alert';          Enabled = $true; RetentionPolicy = [PSCustomObject]@{ Days = 90; Enabled = $true } }
+            )
+        }
+        Mock Get-AzDiagnosticSetting { @($diagSetting) }
+        Mock Get-AzActivityLogAlert { @([PSCustomObject]@{ Name = 'alert1' }) }
+        Mock Get-AzOperationalInsightsWorkspace {
+            [PSCustomObject]@{ Name = 'test-ws'; retentionInDays = 30 }
+        }
+
+        $sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
+        $result = Get-ActivityLogFindings -Subscription $sub
+        $finding = $result.Findings | Where-Object { $_.FindingType -eq 'WorkspaceRetentionShort' }
+        $finding | Should -Not -BeNullOrEmpty
+        $finding.Severity | Should -Be 'MEDIUM'
     }
 }
 
