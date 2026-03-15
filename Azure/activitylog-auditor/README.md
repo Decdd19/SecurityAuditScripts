@@ -1,6 +1,6 @@
 # 📋 Activity Log Auditor
 
-Audits Azure Activity Log diagnostic settings across your subscription — checking for logging gaps, missing categories, short retention, and absent alerting on critical operations. Azure equivalent of the [cloudtrail-auditor](../AWS/cloudtrail-auditor/).
+Audits Azure Activity Log diagnostic settings across your subscription — checking for logging gaps, missing categories, short retention, and absent alerting on critical operations. Azure equivalent of the [cloudtrail-auditor](../../AWS/cloudtrail-auditor/).
 
 ---
 

@@ -11,8 +11,8 @@ Security auditing scripts for AWS environments. All scripts are read-only, requi
 | IAM Privilege Mapper | [iam-privilege-mapper](./iam-privilege-mapper/) | Maps IAM users, roles, and groups. Flags high-risk permissions, privilege escalation paths, stale credentials, and MFA gaps. |
 | S3 Bucket Auditor | [s3-auditor](./s3-auditor/) | Audits all S3 buckets for public access, encryption, versioning, logging, and lifecycle policies. |
 | CloudTrail Auditor | [cloudtrail-auditor](./cloudtrail-auditor/) | Checks CloudTrail across all regions for logging gaps, KMS encryption, and CloudWatch integration. |
-| Security Group Auditor | [security-group-auditor](./security-group-auditor/) | Scans all security groups across all regions for open ports, unrestricted ingress, and unused groups. |
-| Root Account Auditor | [root-account-auditor](./root-account-auditor/) | Audits root account MFA, access keys, password policy, and alternate contacts. |
+| Security Group Auditor | [sg-auditor](./sg-auditor/) | Scans all security groups across all regions for open ports, unrestricted ingress, and unused groups. |
+| Root Account Auditor | [root-auditor](./root-auditor/) | Audits root account MFA, access keys, password policy, and alternate contacts. |
 
 ---
 
@@ -30,8 +30,8 @@ Security auditing scripts for AWS environments. All scripts are read-only, requi
 python3 iam-privilege-mapper/iam_mapper_v2.py --format html --output iam_report
 python3 s3-auditor/s3_auditor.py --format html --output s3_report
 python3 cloudtrail-auditor/cloudtrail_auditor.py --format html --output cloudtrail_report
-python3 security-group-auditor/sg_auditor.py --format html --output sg_report
-python3 root-account-auditor/root_auditor.py --format html --output root_report
+python3 sg-auditor/sg_auditor.py --format html --output sg_report
+python3 root-auditor/root_auditor.py --format html --output root_report
 ```
 
 ---

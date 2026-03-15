@@ -36,4 +36,4 @@ jobs:
 
       - name: Run Pester tests
         shell: pwsh
-        run: Invoke-Pester OnPrem/Windows -Output Detailed
+        run: Invoke-Pester Azure, OnPrem/Windows -Output Detailed
