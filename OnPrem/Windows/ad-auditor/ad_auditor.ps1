@@ -172,7 +172,7 @@ function Write-TerminalSummary {
             $name = if ($f.PSObject.Properties['UserName'] -and $f.UserName) { $f.UserName } `
                     elseif ($f.PSObject.Properties['ComputerName'] -and $f.ComputerName) { $f.ComputerName } `
                     else { $f.FindingType }
-            $line = "  [$($f.Severity)] $name: $($f.FindingType)"
+            $line = "  [$($f.Severity)] ${name}: $($f.FindingType)"
             Write-Host "║  $($line.PadRight(47))║" -ForegroundColor Cyan
         }
     }

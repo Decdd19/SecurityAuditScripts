@@ -451,7 +451,7 @@ function Write-TerminalSummary {
         Write-Host '║  Top findings:                                   ║' -ForegroundColor Cyan
         foreach ($f in $top3) {
             $name = if ($f.UserName -ne '') { $f.UserName } elseif ($f.GroupName -ne '') { $f.GroupName } else { $f.FindingType }
-            $line = "  [$($f.Severity)] $name: $($f.FindingType)"
+            $line = "  [$($f.Severity)] ${name}: $($f.FindingType)"
             Write-Host "║  $($line.PadRight(47))║" -ForegroundColor Cyan
         }
     }
