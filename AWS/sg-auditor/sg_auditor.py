@@ -182,7 +182,7 @@ def analyse_sg(ec2, sg, region, attached_resources):
     if open_rdp:
         flags.append("❌ RDP (3389) open to the world")
     for p in high_risk_open:
-        if p not in ["SSH", "RDP"]:
+        if not p.startswith(("22/", "3389/")):
             flags.append(f"⚠️ {p} open to the world")
     if is_default and open_ports:
         flags.append("⚠️ Default security group has open rules (best practice: keep default empty)")

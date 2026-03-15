@@ -120,16 +120,16 @@ def test_password_policy_no_policy():
 # ── calculate_score ────────────────────────────────────────────────────────────
 
 def test_score_no_mfa_critical():
-    score, level = ra.calculate_score(True, False, False, False, False, False, 0)
+    score, level = ra.calculate_score(True, False, False, False, False, False)
     assert score >= 5
 
 
 def test_score_root_keys_high():
-    score, level = ra.calculate_score(False, True, False, False, False, False, 0)
+    score, level = ra.calculate_score(False, True, False, False, False, False)
     assert score >= 4
 
 
 def test_score_all_clear():
-    score, level = ra.calculate_score(False, False, False, False, False, False, 0)
+    score, level = ra.calculate_score(False, False, False, False, False, False)
     assert score == 0
     assert level == "LOW"

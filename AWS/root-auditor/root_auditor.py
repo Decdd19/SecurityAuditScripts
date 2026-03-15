@@ -24,6 +24,7 @@ import csv
 import argparse
 import logging
 import os
+import time
 from datetime import datetime, timezone
 from botocore.config import Config
 from botocore.exceptions import ClientError
@@ -51,7 +52,7 @@ PASSWORD_POLICY_DEFAULTS = {
 
 def calculate_score(no_mfa, active_root_keys, root_used_recently,
                     weak_password_policy, no_alternate_contacts,
-                    no_support_plan, account_age_days):
+                    no_support_plan):
     score = 0
     if no_mfa:
         score += 5
@@ -62,6 +63,8 @@ def calculate_score(no_mfa, active_root_keys, root_used_recently,
     if weak_password_policy:
         score += 2
     if no_alternate_contacts:
+        score += 1
+    if no_support_plan:
         score += 1
     score = min(score, 10)
 
@@ -84,7 +87,6 @@ def check_credential_report(iam):
 
     Warns if the report is stale (AWS caches reports for up to 4 hours).
     """
-    import time
     try:
         iam.generate_credential_report()
         for _ in range(10):
@@ -292,8 +294,7 @@ def audit_root(session):
 
     score, risk_level = calculate_score(
         not mfa_enabled, has_root_keys, root_used_recently,
-        weak_policy, no_alternate, support_plan == "Basic (no paid support)",
-        0
+        weak_policy, no_alternate, support_plan == "Basic (no paid support)"
     )
 
     flags = []

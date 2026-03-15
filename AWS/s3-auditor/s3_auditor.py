@@ -194,16 +194,6 @@ def get_bucket_location(s3, bucket):
         return "Unknown"
 
 
-def get_bucket_size(s3, bucket, region):
-    """Approximate object count via listing (capped at 1 for speed)."""
-    try:
-        regional_s3 = boto3.client("s3", region_name=region)
-        resp = regional_s3.list_objects_v2(Bucket=bucket, MaxKeys=1)
-        return resp.get("KeyCount", 0), resp.get("IsTruncated", False)
-    except ClientError:
-        return 0, False
-
-
 # ── Analyse bucket ────────────────────────────────────────────────────────────
 
 def analyse_bucket(s3, bucket_name):
