@@ -19,6 +19,7 @@ Usage:
 """
 
 import boto3
+import html
 import json
 import csv
 import argparse
@@ -390,14 +391,15 @@ def write_html(report, path):
     generated = report["generated_at"]
     risk_colors = {"CRITICAL": "#c0392b", "HIGH": "#e67e22", "MEDIUM": "#f1c40f", "LOW": "#27ae60"}
     color = risk_colors.get(f["risk_level"], "#999")
-    flags_html = "".join(f'<li>{flag}</li>' for flag in f.get("flags", []))
-    policy_html = "".join(f'<li>{issue}</li>' for issue in f.get("password_policy_issues", []))
+    flags_html = "".join(f'<li>{html.escape(flag)}</li>' for flag in f.get("flags", []))
+    policy_html = "".join(f'<li>{html.escape(issue)}</li>' for issue in f.get("password_policy_issues", []))
 
     contacts = f.get("alternate_contacts", {})
     contact_rows = "".join(
-        f'<tr><td>{k}</td><td>{"✅ " + _mask_email(v) if v else "❌ Not configured"}</td></tr>'
+        f'<tr><td>{html.escape(k)}</td><td>{"✅ " + _mask_email(v) if v else "❌ Not configured"}</td></tr>'
         for k, v in contacts.items()
     )
+    account_id_escaped = html.escape(str(f["account_id"]))
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -428,7 +430,7 @@ def write_html(report, path):
 <body>
 <div class="header">
   <h1>👑 Root Account Audit Report</h1>
-  <p>Generated: {generated} &nbsp;|&nbsp; Account: {f['account_id']}</p>
+  <p>Generated: {generated} &nbsp;|&nbsp; Account: {account_id_escaped}</p>
 </div>
 <div class="content">
   <div class="card">

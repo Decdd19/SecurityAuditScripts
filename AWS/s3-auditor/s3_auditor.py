@@ -18,6 +18,7 @@ Usage:
 """
 
 import boto3
+import html
 import json
 import csv
 import argparse
@@ -306,15 +307,16 @@ def write_html(report, path):
     rows = ""
     for f in findings:
         color = risk_colors.get(f["risk_level"], "#999")
-        flags_html = "<br>".join(f.get("flags", [])) or "None"
-        policy_html = "<br>".join(f.get("policy_findings", [])) or "None"
+        flags_html = "<br>".join(html.escape(flag) for flag in f.get("flags", [])) or "None"
+        policy_html = "<br>".join(html.escape(pf) for pf in f.get("policy_findings", [])) or "None"
         public_badge = '<span style="background:#c0392b;color:white;padding:1px 6px;border-radius:3px">PUBLIC</span>' if f["is_public"] else '<span style="background:#27ae60;color:white;padding:1px 6px;border-radius:3px">PRIVATE</span>'
         enc = f.get("encryption_algorithm") or "❌ None"
+        name_escaped = html.escape(f["name"])
         rows += f"""
         <tr>
             <td><span style="background:{color};color:white;padding:2px 8px;border-radius:4px;font-weight:bold">{f['risk_level']}</span></td>
             <td style="font-weight:bold">{f['severity_score']}/10</td>
-            <td>{f['name']}</td>
+            <td>{name_escaped}</td>
             <td>{f['region']}</td>
             <td>{public_badge}</td>
             <td>{enc}</td>

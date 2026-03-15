@@ -19,6 +19,7 @@ Usage:
 """
 
 import boto3
+import html
 import json
 import csv
 import argparse
@@ -276,12 +277,13 @@ def write_html(report, path):
     rows = ""
     for f in findings:
         color = risk_colors.get(f["risk_level"], "#999")
-        flags_html = "<br>".join(f.get("flags", [])) or "None"
+        flags_html = "<br>".join(html.escape(flag) for flag in f.get("flags", [])) or "None"
+        name_escaped = html.escape(f["name"])
         rows += f"""
         <tr>
             <td><span style="background:{color};color:white;padding:2px 8px;border-radius:4px;font-weight:bold">{f['risk_level']}</span></td>
             <td style="font-weight:bold">{f['severity_score']}/10</td>
-            <td>{f['name']}</td>
+            <td>{name_escaped}</td>
             <td>{f['home_region']}</td>
             <td>{'✅ Active' if f['is_logging'] else '❌ Inactive'}</td>
             <td>{'✅' if f['is_multi_region'] else '❌'}</td>
@@ -296,7 +298,7 @@ def write_html(report, path):
         uncovered_html = f"""
         <div style="margin: 0 40px 20px; padding: 15px 20px; background: #fdf3e3; border-left: 4px solid #e67e22; border-radius: 4px;">
             <strong>⚠️ Regions with no CloudTrail coverage ({len(uncovered)}):</strong><br>
-            <span style="font-size:0.9em">{', '.join(uncovered)}</span>
+            <span style="font-size:0.9em">{', '.join(html.escape(r) for r in uncovered)}</span>
         </div>"""
 
     html = f"""<!DOCTYPE html>
