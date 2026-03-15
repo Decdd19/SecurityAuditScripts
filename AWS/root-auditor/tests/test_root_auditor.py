@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
 from datetime import datetime, timezone, timedelta
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 from botocore.exceptions import ClientError
 import root_auditor as ra
 
@@ -192,13 +192,11 @@ def test_check_credential_report_recent_root_login():
     }
     root_line = ra.check_credential_report(iam)
     assert root_line is not None
-    # Simulate the audit_root logic: if password_last_used is a recent date, root_used_recently = True
-    last_login = root_line["password_last_used"]
-    assert last_login not in ("N/A", "no_information", "")
-    last_login_dt = datetime.fromisoformat(last_login.replace("Z", "+00:00"))
-    days_since = (ra.NOW - last_login_dt).days
-    root_used_recently = days_since < 90
-    assert root_used_recently is True
+    pl = root_line["password_last_used"]
+    assert pl not in ("no_information", "N/A")
+    # Verify it's a parseable timestamp
+    dt = datetime.fromisoformat(pl.replace("Z", "+00:00"))
+    assert (datetime.now(timezone.utc) - dt).days < 10
 
 
 def test_check_credential_report_stale_report():
@@ -264,6 +262,7 @@ def test_check_alternate_contacts_api_unavailable():
     # Callers may choose to handle this differently; here we verify no exception is raised
     assert isinstance(contacts, dict)
     assert set(contacts.keys()) == {"BILLING", "OPERATIONS", "SECURITY"}
+    assert all(v is None for v in contacts.values())
 
 
 # ── check_support_plan ─────────────────────────────────────────────────────────
@@ -299,16 +298,14 @@ def _make_clean_iam(recent_login=False, has_keys=False, mfa_enabled=True):
         iam.list_virtual_mfa_devices.return_value = {"VirtualMFADevices": [
             {"User": {"Arn": "arn:aws:iam::123456789012:root"}}
         ]}
+        iam.get_account_summary.return_value = {"SummaryMap": {
+            "AccountMFAEnabled": 1,
+            "AccountAccessKeysPresent": 1 if has_keys else 0,
+        }}
     else:
         iam.list_virtual_mfa_devices.return_value = {"VirtualMFADevices": []}
         iam.get_account_summary.return_value = {"SummaryMap": {
             "AccountMFAEnabled": 0,
-            "AccountAccessKeysPresent": 1 if has_keys else 0,
-        }}
-
-    if mfa_enabled:
-        iam.get_account_summary.return_value = {"SummaryMap": {
-            "AccountMFAEnabled": 1,
             "AccountAccessKeysPresent": 1 if has_keys else 0,
         }}
 
