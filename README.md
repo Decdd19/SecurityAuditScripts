@@ -1,8 +1,8 @@
-# ☁️ Cloud Audit Scripts
+# 🛡️ Security Audit Scripts
 
 [![CI](https://github.com/Decdd19/SecurityAuditScripts/actions/workflows/ci.yml/badge.svg)](https://github.com/Decdd19/SecurityAuditScripts/actions/workflows/ci.yml)
 
-A collection of security auditing scripts for AWS and other cloud platforms. Built for cloud security engineers, sysadmins, and anyone who wants visibility into their cloud environment without relying solely on commercial tooling.
+A collection of security auditing scripts for AWS, Azure, and on-premises infrastructure. Built for security engineers and sysadmins who want real visibility into their environment without relying on commercial tooling.
 
 > **Purpose:** Practical, standalone scripts that give you real security insight. No agents, no SaaS dependencies — just run and review.
 
@@ -20,13 +20,22 @@ SecurityAuditScripts/
 │   ├── cloudtrail-auditor/         # CloudTrail coverage and logging gaps
 │   ├── sg-auditor/                 # Security group open ports and ingress rules
 │   └── root-auditor/               # Root account MFA, access keys, password policy
-└── Azure/
+├── Azure/
+│   ├── README.md
+│   ├── entra-auditor/              # Entra ID MFA, guest roles, app credentials, privesc
+│   ├── storage-auditor/            # Storage account public access, encryption, soft delete
+│   ├── activitylog-auditor/        # Activity Log diagnostic settings and alerting
+│   ├── nsg-auditor/                # NSG open ports, orphaned groups
+│   └── subscription-auditor/       # Defender for Cloud, PIM, Global Admin hygiene
+└── OnPrem/
     ├── README.md
-    ├── entra-auditor/              # Entra ID MFA, guest roles, app credentials, privesc
-    ├── storage-auditor/            # Storage account public access, encryption, soft delete
-    ├── activitylog-auditor/        # Activity Log diagnostic settings and alerting
-    ├── nsg-auditor/                # NSG open ports, orphaned groups
-    └── subscription-auditor/       # Defender for Cloud, PIM, Global Admin hygiene
+    ├── Windows/
+    │   ├── ad-auditor/             # Active Directory hygiene, Kerberoasting, delegation
+    │   ├── localuser-auditor/      # Local users, registry, NTLM, LAPS, WDigest
+    │   └── winfirewall-auditor/    # Firewall profiles, open ports, rule analysis
+    └── Linux/
+        ├── linux-user-auditor/     # Users, sudo, SSH, password policy
+        └── linux-firewall-auditor/ # iptables/nftables/ufw/firewalld, auditd, syslog
 ```
 
 ---
@@ -52,6 +61,16 @@ SecurityAuditScripts/
 | [Activity Log Auditor](./Azure/activitylog-auditor/) | Checks Activity Log diagnostic settings for coverage, retention, missing categories, and alerting gaps. | JSON, CSV, HTML |
 | [NSG Auditor](./Azure/nsg-auditor/) | Scans Network Security Groups for dangerous open ports, internet-exposed rules, and orphaned groups. | JSON, CSV, HTML |
 | [Subscription Auditor](./Azure/subscription-auditor/) | Audits subscription posture including Defender for Cloud, permanent privileged roles, Global Admin hygiene, and budget alerts. | JSON, CSV, HTML |
+
+### On-Premises
+
+| Script | Description | Output |
+|--------|-------------|--------|
+| [AD Auditor](./OnPrem/Windows/ad-auditor/) | Audits Active Directory for stale accounts, Kerberoastable users, weak password policy, unconstrained delegation, and privileged group hygiene. | JSON, CSV, HTML |
+| [Local User Auditor](./OnPrem/Windows/localuser-auditor/) | Audits local accounts, registry autologon, WDigest, NTLMv1, LAPS detection, and local admin group membership. | JSON, CSV, HTML |
+| [Windows Firewall Auditor](./OnPrem/Windows/winfirewall-auditor/) | Audits Windows Firewall profiles and rules for disabled profiles, default-allow policies, and dangerous ports open to any source. | JSON, CSV, HTML |
+| [Linux User Auditor](./OnPrem/Linux/linux-user-auditor/) | Audits Linux user accounts, sudo rules, SSH configuration, password policy from login.defs, and stale accounts. | JSON, CSV, HTML |
+| [Linux Firewall Auditor](./OnPrem/Linux/linux-firewall-auditor/) | Auto-detects and audits iptables/nftables/ufw/firewalld. Also checks auditd rules and syslog configuration. | JSON, CSV, HTML |
 
 ---
 
@@ -90,6 +109,17 @@ Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.
 Connect-AzAccount
 ```
 
+### On-Premises
+
+**Windows scripts:**
+- PowerShell 5.1+ or 7+
+- Run as local administrator (localuser-auditor, winfirewall-auditor)
+- RSAT ActiveDirectory module for ad-auditor (domain-joined machine)
+
+**Linux scripts:**
+- Python 3.7+
+- Run as root (`sudo`) for shadow file and firewall access
+
 ---
 
 ## 🚀 Quick Start
@@ -110,16 +140,35 @@ Connect-AzAccount
 .\Azure\entra-auditor\entra_auditor.ps1 -Format html
 ```
 
+### On-Premises (Windows)
+```powershell
+git clone https://github.com/Decdd19/SecurityAuditScripts.git
+cd SecurityAuditScripts
+.\OnPrem\Windows\winfirewall-auditor\winfirewall_auditor.ps1 -Format html
+.\OnPrem\Windows\localuser-auditor\localuser_auditor.ps1 -Format all
+.\OnPrem\Windows\ad-auditor\ad_auditor.ps1 -Format html  # domain-joined only
+```
+
+### On-Premises (Linux)
+```bash
+git clone https://github.com/Decdd19/SecurityAuditScripts.git
+cd SecurityAuditScripts
+sudo python3 OnPrem/Linux/linux-user-auditor/linux_user_auditor.py --format html
+sudo python3 OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py --format all
+```
+
 ---
 
 ## 📌 Notes
 
-- Scripts are **read-only** — they query APIs and do not make any changes to your environment
-- AWS scripts are designed to run in **AWS CloudShell**; Azure scripts run in **Azure CloudShell** or locally
+- Scripts are **read-only** — they query configuration and do not make any changes to your environment
+- AWS scripts are designed to run in **AWS CloudShell**; Azure scripts run in **Azure CloudShell** or locally; OnPrem scripts run directly on the target machine
 - Output files are written to the current working directory unless specified otherwise
 - All output files are created with owner-only permissions (600)
-- AWS scripts support `--format` (json, csv, html, all) and `--profile` flags
+- AWS scripts support `--format` (json, csv, html, all, stdout) and `--profile` flags
 - Azure scripts support `-Format` (json, csv, html, all, stdout) and `-AllSubscriptions` flags
+- OnPrem Windows scripts support `-Format` (json, csv, html, all, stdout)
+- OnPrem Linux scripts support `--format` (json, csv, html, all, stdout)
 
 ---
 
@@ -131,4 +180,4 @@ Feel free to open a PR or raise an issue if you have improvements, bug fixes, or
 
 ## ⚠️ Disclaimer
 
-These scripts are provided for **internal security auditing purposes only**. Always ensure you have appropriate authorisation before running security tooling against any cloud environment.
+These scripts are provided for **internal security auditing purposes only**. Always ensure you have appropriate authorisation before running security tooling against any environment.
