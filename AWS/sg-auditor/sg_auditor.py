@@ -298,7 +298,7 @@ def write_html(report, path):
             <td style="font-size:0.8em">{flags_html}</td>
         </tr>"""
 
-    html = f"""<!DOCTYPE html>
+    html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -354,7 +354,7 @@ def write_html(report, path):
 </html>"""
 
     with open(path, "w") as f:
-        f.write(html)
+        f.write(html_content)
     os.chmod(path, 0o600)
     log.info(f"HTML report: {path}")
 

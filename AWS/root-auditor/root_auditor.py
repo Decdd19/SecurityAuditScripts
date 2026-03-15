@@ -396,14 +396,17 @@ def write_html(report, path):
 
     contacts = f.get("alternate_contacts", {})
     contact_rows = "".join(
-        f'<tr><td>{html.escape(k)}</td><td>{"✅ " + _mask_email(v) if v else "❌ Not configured"}</td></tr>'
+        (lambda contact_val: f'<tr><td>{html.escape(k)}</td><td>{contact_val}</td></tr>')(
+            ("✅ " + html.escape(_mask_email(v))) if v else "❌ Not configured"
+        )
         for k, v in contacts.items()
     )
     account_id_escaped = html.escape(str(f["account_id"]))
     last_login_escaped = html.escape(str(f["root_last_console_login"])) if f["root_last_console_login"] else "Never / Unknown"
     org_id_escaped = html.escape(str(f["org_id"])) if f["org_id"] else ""
+    support_plan_escaped = html.escape(str(f["support_plan"]))
 
-    html = f"""<!DOCTYPE html>
+    html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -447,7 +450,7 @@ def write_html(report, path):
     <div class="metric"><span class="label">Root Used Recently</span><span class="value">{'⚠️ Yes' if f['root_used_recently'] else '✅ No'}</span></div>
     <div class="metric"><span class="label">Last Login</span><span class="value">{last_login_escaped}</span></div>
     <div class="metric"><span class="label">Org Management Account</span><span class="value">{'Yes — ' + org_id_escaped if f['is_org_management_account'] else 'No'}</span></div>
-    <div class="metric"><span class="label">Support Plan</span><span class="value">{f['support_plan']}</span></div>
+    <div class="metric"><span class="label">Support Plan</span><span class="value">{support_plan_escaped}</span></div>
   </div>
   <div class="card">
     <h2>Findings & Flags</h2>
@@ -467,7 +470,7 @@ def write_html(report, path):
 </html>"""
 
     with open(path, "w") as fh:
-        fh.write(html)
+        fh.write(html_content)
     os.chmod(path, 0o600)
     log.info(f"HTML report: {path}")
 

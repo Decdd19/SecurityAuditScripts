@@ -310,7 +310,8 @@ def write_html(report, path):
         flags_html = "<br>".join(html.escape(flag) for flag in f.get("flags", [])) or "None"
         policy_html = "<br>".join(html.escape(pf) for pf in f.get("policy_findings", [])) or "None"
         public_badge = '<span style="background:#c0392b;color:white;padding:1px 6px;border-radius:3px">PUBLIC</span>' if f["is_public"] else '<span style="background:#27ae60;color:white;padding:1px 6px;border-radius:3px">PRIVATE</span>'
-        enc = f.get("encryption_algorithm") or "❌ None"
+        _enc_raw = f.get("encryption_algorithm") or ""
+        enc = html.escape(_enc_raw) if _enc_raw else "❌ None"
         name_escaped = html.escape(f["name"])
         region_escaped = html.escape(str(f["region"]))
         versioning_escaped = html.escape(str(f["versioning_status"]))
@@ -327,7 +328,7 @@ def write_html(report, path):
             <td style="font-size:0.8em">{flags_html}</td>
         </tr>"""
 
-    html = f"""<!DOCTYPE html>
+    html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -382,7 +383,7 @@ def write_html(report, path):
 </html>"""
 
     with open(path, "w") as f:
-        f.write(html)
+        f.write(html_content)
     os.chmod(path, 0o600)
     log.info(f"HTML report: {path}")
 
