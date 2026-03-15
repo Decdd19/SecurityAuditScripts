@@ -235,20 +235,19 @@ def test_check_region_coverage_region_without_trail():
 
 
 def test_check_region_coverage_api_error_not_uncovered():
-    """A region where the API raises a ClientError IS counted as uncovered by the
-    current implementation (the function appends error regions). This test documents
-    that behavior — we verify it does not raise an exception and returns a list."""
+    """A region where the API raises a ClientError should NOT be counted as uncovered.
+    API errors (e.g. opt-in regions not enabled) should be skipped to avoid false positives."""
     session = MagicMock()
     mock_ct = MagicMock()
     mock_ct.describe_trails.side_effect = _client_error("AccessDenied")
     session.client.return_value = mock_ct
 
-    # The function catches ClientError and appends the region to uncovered
-    # (i.e., it conservatively treats inaccessible regions as uncovered)
+    # The function should skip regions with API errors rather than flagging them uncovered
     uncovered = ct.check_region_coverage(session)
     assert isinstance(uncovered, list)
-    # All regions errored, so all are in uncovered
-    assert len(uncovered) == len(ct.ALL_REGIONS)
+    # All regions errored, so none should be in uncovered
+    assert len(uncovered) == 0
+    assert "us-east-1" not in uncovered
 
 
 # ── write_json / write_csv permissions ────────────────────────────────────────

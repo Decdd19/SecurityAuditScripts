@@ -230,8 +230,9 @@ def check_region_coverage(session):
             trails = ct.describe_trails(includeShadowTrails=False).get("trailList", [])
             if not trails:
                 uncovered.append(region)
-        except ClientError:
-            uncovered.append(region)
+        except ClientError as e:
+            log.warning(f"API error checking region {region}, skipping: {e}")
+            continue
     return uncovered
 
 
