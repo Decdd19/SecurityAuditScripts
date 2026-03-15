@@ -36,4 +36,4 @@ jobs:
 
       - name: Run Pester tests
         shell: pwsh
-        run: Invoke-Pester OnPrem/Windows -Recurse -Output Detailed
+        run: Invoke-Pester OnPrem/Windows -Output Detailed
