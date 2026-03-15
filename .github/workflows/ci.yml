@@ -19,10 +19,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -r tests/requirements-test.txt
+        run: pip install -r AWS/requirements-test.txt
 
       - name: Run tests
-        run: pytest tests/ OnPrem/Linux/ -v
+        run: pytest AWS/ OnPrem/Linux/ -v
 
   pester:
     runs-on: windows-latest

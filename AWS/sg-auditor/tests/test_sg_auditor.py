@@ -1,7 +1,7 @@
 """Tests for sg_auditor.py"""
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../AWS/sg-auditor"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
 import sg_auditor as sg
