@@ -19,6 +19,7 @@ Describe 'Get-ActivityLogFindings' {
         $finding = $result.Findings | Where-Object { $_.FindingType -eq 'NoDiagnosticSetting' }
         $finding | Should -Not -BeNullOrEmpty
         $finding.Severity | Should -Be 'CRITICAL'
+        $finding.Recommendation | Should -Match 'Azure Portal'
     }
 
     It 'flags diagnostic setting with no destination configured as CRITICAL' {
@@ -37,6 +38,7 @@ Describe 'Get-ActivityLogFindings' {
         $finding = $result.Findings | Where-Object { $_.FindingType -eq 'NoLogDestination' }
         $finding | Should -Not -BeNullOrEmpty
         $finding.Severity | Should -Be 'CRITICAL'
+        $finding.Recommendation | Should -Match 'Azure Portal'
     }
 
     It 'flags diagnostic setting missing Administrative category as HIGH' {
@@ -60,6 +62,7 @@ Describe 'Get-ActivityLogFindings' {
         $finding = $result.Findings | Where-Object { $_.FindingType -eq 'MissingLogCategory' -and $_.Detail -like '*Administrative*' }
         $finding | Should -Not -BeNullOrEmpty
         $finding.Severity | Should -Be 'HIGH'
+        $finding.Recommendation | Should -Match 'Azure Portal'
     }
 
     It 'flags subscription with no Activity Log alerts as HIGH' {
@@ -83,6 +86,7 @@ Describe 'Get-ActivityLogFindings' {
         $finding = $result.Findings | Where-Object { $_.FindingType -eq 'NoActivityLogAlerts' }
         $finding | Should -Not -BeNullOrEmpty
         $finding.Severity | Should -Be 'HIGH'
+        $finding.Recommendation | Should -Match 'Azure Portal'
     }
 
     It 'flags short retention on storage account destination as MEDIUM' {
@@ -106,6 +110,7 @@ Describe 'Get-ActivityLogFindings' {
         $finding = $result.Findings | Where-Object { $_.FindingType -eq 'ShortRetention' }
         $finding | Should -Not -BeNullOrEmpty
         $finding.Severity | Should -Be 'MEDIUM'
+        $finding.Recommendation | Should -Match 'Azure Portal'
     }
 
     It 'flags Event Hub destination as RetentionUnverifiable (LOW)' {
@@ -176,6 +181,7 @@ Describe 'Get-ActivityLogFindings' {
         $finding = $result.Findings | Where-Object { $_.FindingType -eq 'WorkspaceRetentionShort' }
         $finding | Should -Not -BeNullOrEmpty
         $finding.Severity | Should -Be 'MEDIUM'
+        $finding.Recommendation | Should -Match 'Azure Portal'
     }
 }
 

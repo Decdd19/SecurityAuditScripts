@@ -87,7 +87,7 @@ function Get-ActivityLogFindings {
             Detail         = 'No diagnostic setting configured for the subscription Activity Log'
             Score          = 9
             Severity       = 'CRITICAL'
-            Recommendation = 'Create a diagnostic setting to export Activity Log to a Log Analytics workspace, storage account, or Event Hub.'
+            Recommendation = 'Create activity log diagnostic setting: Azure Portal → Monitor → Activity log → Export Activity Logs → Add diagnostic setting → select all categories → send to Log Analytics workspace → Save'
         } + $base))
     } else {
         foreach ($diag in $diagSettings) {
@@ -147,7 +147,7 @@ function Get-ActivityLogFindings {
                         Detail         = "Retention is $minDays days (minimum 90)"
                         Score          = 5
                         Severity       = 'MEDIUM'
-                        Recommendation = "Increase retention to at least 90 days on the storage account destination in diagnostic setting '$($diag.Name)'."
+                        Recommendation = "Increase retention: Azure Portal → Monitor → Activity log → Export Activity Logs → $($diag.Name) → edit → set Retention to 365 days → Save"
                     } + $base))
                 }
             }
@@ -169,7 +169,7 @@ function Get-ActivityLogFindings {
                                     Detail         = "Log Analytics workspace '$wsName' retention is $($workspace.retentionInDays) days (minimum 90)"
                                     Score          = 4
                                     Severity       = (Get-SeverityLabel 4)
-                                    Recommendation = "Increase the retention period of Log Analytics workspace '$wsName' to at least 90 days."
+                                    Recommendation = "Create Log Analytics workspace: Azure Portal → Log Analytics workspaces → Create → choose subscription/RG/region → Review + Create"
                                 } + $base))
                             }
                         }
@@ -202,7 +202,7 @@ function Get-ActivityLogFindings {
             Detail         = 'No Activity Log alerts configured for this subscription'
             Score          = 6
             Severity       = 'HIGH'
-            Recommendation = 'Create Activity Log alerts for critical operations such as policy changes, role assignments, and security group modifications.'
+            Recommendation = 'Create activity log alert: Azure Portal → Monitor → Alerts → Create → Alert rule → Signal type: Activity log → select critical operation (e.g. Delete Policy Assignment) → set Action Group → Create'
         } + $base))
     }
 
@@ -229,7 +229,7 @@ function ConvertTo-HtmlReport {
             <td>$([System.Web.HttpUtility]::HtmlEncode($f.FindingType))</td>
             <td>$detail</td>
             <td><span style='background:$colour;color:#fff;padding:2px 6px;border-radius:3px;font-weight:bold'>$($f.Severity)</span></td>
-            <td>$([System.Web.HttpUtility]::HtmlEncode($f.Recommendation))</td>
+            <td><div class='rem-text'>&#8627; $([System.Web.HttpUtility]::HtmlEncode($f.Recommendation))</div></td>
         </tr>"
     }
 
@@ -245,6 +245,7 @@ function ConvertTo-HtmlReport {
   th{background:#343a40;color:#fff;padding:10px;text-align:left}
   td{padding:8px 10px;border-bottom:1px solid #dee2e6}tr:hover{background:#f1f3f5}
   .meta{color:#666;font-size:.85em;margin-bottom:16px}
+  .rem-text { display: block; font-size: 0.78em; color: #555; padding-left: 12px; font-style: italic; margin-top: 4px; }
 </style></head><body>
 <h1>Activity Log Audit Report</h1>
 <p class='meta'>Tenant: $TenantId &nbsp;|&nbsp; Generated: $ScannedAt</p>
