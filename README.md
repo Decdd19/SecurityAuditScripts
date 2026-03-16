@@ -19,7 +19,11 @@ SecurityAuditScripts/
 │   ├── s3-auditor/                 # S3 bucket public access, encryption, versioning
 │   ├── cloudtrail-auditor/         # CloudTrail coverage and logging gaps
 │   ├── sg-auditor/                 # Security group open ports and ingress rules
-│   └── root-auditor/               # Root account MFA, access keys, password policy
+│   ├── root-auditor/               # Root account MFA, access keys, password policy
+│   ├── ec2-auditor/                # EC2 IMDS v2, EBS encryption, public IPs, snapshots
+│   └── rds-auditor/                # RDS public access, encryption, backups, multi-AZ
+├── tools/
+│   └── exec_summary.py             # Cross-cloud executive summary report (aggregates all JSON reports)
 ├── Azure/
 │   ├── README.md
 │   ├── entra-auditor/              # Entra ID MFA, guest roles, app credentials, privesc
@@ -51,6 +55,14 @@ SecurityAuditScripts/
 | [CloudTrail Auditor](./AWS/cloudtrail-auditor/) | Checks CloudTrail coverage across all regions for logging gaps, missing KMS encryption, and CloudWatch integration. | JSON, CSV, HTML |
 | [Security Group Auditor](./AWS/sg-auditor/) | Scans all security groups across all regions for dangerous open ports, unrestricted ingress, and unused groups. | JSON, CSV, HTML |
 | [Root Account Auditor](./AWS/root-auditor/) | Audits root account security posture including MFA, access keys, password policy, and alternate contacts. | JSON, CSV, HTML |
+| [EC2 Auditor](./AWS/ec2-auditor/) | Audits EC2 instances across all regions for IMDSv2 enforcement, EBS encryption, public IPs, public snapshots, IAM instance profiles, and default VPC usage. | JSON, CSV, HTML |
+| [RDS Auditor](./AWS/rds-auditor/) | Audits RDS databases for public accessibility, storage encryption, backup retention, deletion protection, IAM authentication, and multi-AZ deployment. | JSON, CSV, HTML |
+
+### Cross-Cloud
+
+| Script | Description | Output |
+|--------|-------------|--------|
+| [Executive Summary](./tools/) | Aggregates JSON reports from all AWS and Azure auditors into a single executive HTML report with an overall security score (0–100), per-pillar risk cards, top findings, and quick wins. | HTML |
 
 ### Azure
 
@@ -129,7 +141,14 @@ Connect-AzAccount
 git clone https://github.com/Decdd19/SecurityAuditScripts.git
 cd SecurityAuditScripts
 pip install boto3
+
+# Run individual auditors
 python3 AWS/iam-privilege-mapper/iam_mapper_v2.py --format html --output iam_report
+python3 AWS/ec2-auditor/ec2_auditor.py --format all --output ec2_report
+python3 AWS/rds-auditor/rds_auditor.py --format all --output rds_report
+
+# Generate cross-cloud executive summary (after running auditors)
+python3 tools/exec_summary.py --input-dir . --output exec_summary.html
 ```
 
 ### Azure
@@ -165,7 +184,7 @@ sudo python3 OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py --for
 - AWS scripts are designed to run in **AWS CloudShell**; Azure scripts run in **Azure CloudShell** or locally; OnPrem scripts run directly on the target machine
 - Output files are written to the current working directory unless specified otherwise
 - All output files are created with owner-only permissions (600)
-- AWS scripts support `--format` (json, csv, html, all, stdout) and `--profile` flags
+- AWS scripts support `--format` (json, csv, html, all, stdout) and `--profile` flags; EC2 and RDS auditors also accept `--regions` to limit scope
 - Azure scripts support `-Format` (json, csv, html, all, stdout) and `-AllSubscriptions` flags
 - OnPrem Windows scripts support `-Format` (json, csv, html, all, stdout)
 - OnPrem Linux scripts support `--format` (json, csv, html, all, stdout)
