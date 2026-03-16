@@ -174,3 +174,99 @@ def test_get_quick_wins_returns_informational_on_high():
     # Only ℹ️ flags on HIGH findings should be returned
     assert len(wins) >= 1
     assert all(w["risk_level"] in ("HIGH", "CRITICAL") for w in wins)
+
+
+import stat
+
+
+SAMPLE_PILLAR_STATS = [
+    {"pillar": "s3", "label": "S3 Buckets", "critical": 1, "high": 2,
+     "medium": 3, "low": 5, "total": 11, "pillar_risk": "CRITICAL", "generated_at": "2026-01-01"},
+    {"pillar": "sg", "label": "Security Groups", "critical": 0, "high": 0,
+     "medium": 2, "low": 8, "total": 10, "pillar_risk": "MEDIUM", "generated_at": "2026-01-01"},
+]
+
+SAMPLE_TOP_FINDINGS = [
+    {"pillar": "s3", "risk_level": "CRITICAL", "severity_score": 9,
+     "name": "my-public-bucket",
+     "flags": ["❌ Public access", "⚠️ No encryption"],
+     "remediations": ["Block public access", "Enable encryption"]},
+]
+
+SAMPLE_QUICK_WINS = [
+    {"pillar": "s3", "risk_level": "HIGH", "resource": "my-bucket",
+     "flag": "ℹ️ Versioning disabled",
+     "remediation": "Enable versioning: S3 Console → Properties → Bucket Versioning → Enable"},
+]
+
+
+def test_write_html_creates_file_with_600_perms(tmp_path):
+    out = str(tmp_path / "exec_summary.html")
+    es.write_html(
+        overall_score=72.5,
+        grade="B",
+        pillar_stats=SAMPLE_PILLAR_STATS,
+        top_findings=SAMPLE_TOP_FINDINGS,
+        quick_wins=SAMPLE_QUICK_WINS,
+        generated_at="2026-01-01T00:00:00+00:00",
+        path=out,
+    )
+    assert (tmp_path / "exec_summary.html").exists()
+    assert (tmp_path / "exec_summary.html").stat().st_mode & 0o777 == 0o600
+
+
+def test_write_html_contains_score(tmp_path):
+    out = str(tmp_path / "exec_summary.html")
+    es.write_html(
+        overall_score=72.5, grade="B",
+        pillar_stats=SAMPLE_PILLAR_STATS,
+        top_findings=SAMPLE_TOP_FINDINGS,
+        quick_wins=SAMPLE_QUICK_WINS,
+        generated_at="2026-01-01T00:00:00+00:00",
+        path=out,
+    )
+    content = (tmp_path / "exec_summary.html").read_text()
+    assert "72.5" in content
+    assert "Grade: B" in content
+
+
+def test_write_html_contains_pillar_names(tmp_path):
+    out = str(tmp_path / "exec_summary.html")
+    es.write_html(
+        overall_score=72.5, grade="B",
+        pillar_stats=SAMPLE_PILLAR_STATS,
+        top_findings=SAMPLE_TOP_FINDINGS,
+        quick_wins=[],
+        generated_at="2026-01-01T00:00:00+00:00",
+        path=out,
+    )
+    content = (tmp_path / "exec_summary.html").read_text()
+    assert "S3 Buckets" in content
+    assert "Security Groups" in content
+
+
+def test_write_html_contains_top_finding(tmp_path):
+    out = str(tmp_path / "exec_summary.html")
+    es.write_html(
+        overall_score=50.0, grade="C",
+        pillar_stats=SAMPLE_PILLAR_STATS,
+        top_findings=SAMPLE_TOP_FINDINGS,
+        quick_wins=SAMPLE_QUICK_WINS,
+        generated_at="2026-01-01T00:00:00+00:00",
+        path=out,
+    )
+    content = (tmp_path / "exec_summary.html").read_text()
+    assert "my-public-bucket" in content
+
+
+def test_write_html_empty_findings_still_creates_file(tmp_path):
+    out = str(tmp_path / "exec_summary.html")
+    es.write_html(
+        overall_score=100.0, grade="A",
+        pillar_stats=[],
+        top_findings=[],
+        quick_wins=[],
+        generated_at="2026-01-01T00:00:00+00:00",
+        path=out,
+    )
+    assert (tmp_path / "exec_summary.html").exists()
