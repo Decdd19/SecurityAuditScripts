@@ -77,13 +77,13 @@ def check_ebs_encryption(ec2_client, block_device_mappings):
         for vol in resp.get("Volumes", []):
             if not vol.get("Encrypted", False):
                 unencrypted.append(vol["VolumeId"])
-    except ClientError:
-        pass
+    except ClientError as e:
+        log.warning(f"Could not describe volumes {vol_ids}: {e}")
     return unencrypted
 
 
-def check_public_snapshots(ec2_client, instance_id):
-    """Return list of public snapshot IDs owned by this account."""
+def check_public_snapshots(ec2_client):
+    """Return list of public snapshot IDs owned by this account (account-level check)."""
     public_snaps = []
     try:
         resp = ec2_client.describe_snapshots(
@@ -94,8 +94,8 @@ def check_public_snapshots(ec2_client, instance_id):
             perms = snap.get("CreateVolumePermissions", [])
             if any(p.get("Group") == "all" for p in perms):
                 public_snaps.append(snap["SnapshotId"])
-    except ClientError:
-        pass
+    except ClientError as e:
+        log.warning(f"Could not describe snapshots: {e}")
     return public_snaps
 
 
@@ -134,7 +134,7 @@ def calculate_score(no_imds_v2, public_ip, unencrypted_volumes,
 
 # ── Analysis ──────────────────────────────────────────────────────────────────
 
-def analyse_instance(ec2_client, instance, default_vpc_id=None):
+def analyse_instance(ec2_client, instance, default_vpc_id=None, account_public_snapshots=None):
     """Analyse a single EC2 instance dict and return a findings dict."""
     instance_id = instance["InstanceId"]
     flags = []
@@ -198,8 +198,8 @@ def analyse_instance(ec2_client, instance, default_vpc_id=None):
             "and flow logs. Default VPC lacks network segmentation controls."
         )
 
-    # Public snapshots
-    public_snaps = check_public_snapshots(ec2_client, instance_id)
+    # Public snapshots (account-level; pre-fetched by run() for efficiency)
+    public_snaps = account_public_snapshots if account_public_snapshots is not None else check_public_snapshots(ec2_client)
     if public_snaps:
         flags.append(f"❌ Public snapshot(s) exist: {', '.join(public_snaps[:3])}")
         remediations.append(
@@ -421,6 +421,8 @@ def run(output_prefix="ec2_report", fmt="all", profile=None, regions=None):
         try:
             ec2_client = session.client("ec2", region_name=region, config=BOTO_CONFIG)
             default_vpc = get_default_vpc(ec2_client)
+            # Fetch account-level public snapshots once per region (not per instance)
+            public_snaps_in_region = check_public_snapshots(ec2_client)
             paginator = ec2_client.get_paginator("describe_instances")
             for page in paginator.paginate(
                 Filters=[{"Name": "instance-state-name", "Values": ["running", "stopped"]}]
@@ -428,7 +430,7 @@ def run(output_prefix="ec2_report", fmt="all", profile=None, regions=None):
                 for reservation in page.get("Reservations", []):
                     for inst in reservation.get("Instances", []):
                         inst["_region"] = region
-                        finding = analyse_instance(ec2_client, inst, default_vpc_id=default_vpc)
+                        finding = analyse_instance(ec2_client, inst, default_vpc_id=default_vpc, account_public_snapshots=public_snaps_in_region)
                         all_findings.append(finding)
         except ClientError as e:
             log.warning(f"Skipping {region}: {e}")
