@@ -40,6 +40,16 @@ REPORT_PATTERNS = [
     "iam_report.json",
     "ec2_report.json",
     "rds_report.json",
+    "storage_report.json",
+    "nsg_report.json",
+    "activitylog_report.json",
+    "subscription_report.json",
+    "entra_report.json",
+    "ad_report.json",
+    "localuser_report.json",
+    "winfirewall_report.json",
+    "user_report.json",
+    "fw_report.json",
 ]
 
 
@@ -52,6 +62,17 @@ def test_discover_reports_finds_known_patterns(tmp_path):
     names = [os.path.basename(p) for p in found]
     assert "s3_report.json" in names
     assert "unrelated.json" not in names
+
+
+def test_discover_reports_finds_all_onprem_patterns(tmp_path):
+    onprem = ["ad_report.json", "localuser_report.json", "winfirewall_report.json",
+              "user_report.json", "fw_report.json"]
+    for fname in onprem:
+        (tmp_path / fname).write_text('{"findings": [], "summary": {}}')
+    found = es.discover_reports(str(tmp_path))
+    names = [os.path.basename(p) for p in found]
+    for fname in onprem:
+        assert fname in names, f"{fname} not found by discover_reports"
 
 
 def test_discover_reports_empty_dir(tmp_path):

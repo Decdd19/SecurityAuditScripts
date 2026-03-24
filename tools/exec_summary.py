@@ -32,6 +32,13 @@ KNOWN_PATTERNS = [
     "activitylog_report.json",
     "subscription_report.json",
     "entra_report.json",
+    # Windows on-prem
+    "ad_report.json",
+    "localuser_report.json",
+    "winfirewall_report.json",
+    # Linux on-prem
+    "user_report.json",
+    "fw_report.json",
 ]
 
 # Human-readable names for display
@@ -48,6 +55,11 @@ PILLAR_LABELS = {
     "activitylog": "Azure Activity Log",
     "subscription": "Azure Subscription",
     "entra": "Azure Entra ID",
+    "ad": "Active Directory",
+    "localuser": "Local Users",
+    "winfirewall": "Windows Firewall",
+    "user": "Linux Users",
+    "fw": "Linux Firewall",
 }
 
 GRADE_COLOURS = {
@@ -111,7 +123,7 @@ def compute_pillar_stats(pillar_name, report):
 def compute_overall_score(pillar_stats_list):
     """
     Compute 0-100 security score and letter grade.
-    Deductions: CRITICAL=-8, HIGH=-4, MEDIUM=-2, LOW=-0.5
+    Deductions: CRITICAL=-20, HIGH=-10, MEDIUM=-4, LOW=-1
     """
     if not pillar_stats_list:
         return 100, "A"
