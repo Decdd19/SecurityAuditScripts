@@ -43,6 +43,7 @@ REPORT_PATTERNS = [
     "guardduty_report.json",
     "vpcflowlogs_report.json",
     "lambda_report.json",
+    "securityhub_report.json",
     "keyvault_report.json",
     "storage_report.json",
     "nsg_report.json",
@@ -52,6 +53,9 @@ REPORT_PATTERNS = [
     "ad_report.json",
     "localuser_report.json",
     "winfirewall_report.json",
+    "smbsigning_report.json",
+    "auditpolicy_report.json",
+    "bitlocker_report.json",
     "user_report.json",
     "fw_report.json",
 ]

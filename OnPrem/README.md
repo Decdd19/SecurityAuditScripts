@@ -11,7 +11,10 @@ OnPrem/
 ├── Windows/
 │   ├── ad-auditor/           # Active Directory domain hygiene (RSAT required)
 │   ├── localuser-auditor/    # Windows local users, registry, and service config
-│   └── winfirewall-auditor/  # Windows Firewall profiles and rules
+│   ├── winfirewall-auditor/  # Windows Firewall profiles and rules
+│   ├── smbsigning-auditor/   # SMB signing enforcement (NTLM relay prevention)
+│   ├── auditpolicy-auditor/  # Windows audit policy subcategory checks
+│   └── bitlocker-auditor/    # BitLocker drive encryption status
 └── Linux/
     ├── linux-user-auditor/   # Linux users, sudo, SSH, and password policy
     └── linux-firewall-auditor/ # iptables/nftables/ufw/firewalld + auditd/syslog
@@ -26,6 +29,9 @@ OnPrem/
 | [ad_auditor.ps1](./Windows/ad-auditor/) | Windows | Yes | PowerShell |
 | [localuser_auditor.ps1](./Windows/localuser-auditor/) | Windows | No | PowerShell |
 | [winfirewall_auditor.ps1](./Windows/winfirewall-auditor/) | Windows | No | PowerShell |
+| [smbsigning_auditor.ps1](./Windows/smbsigning-auditor/) | Windows | No | PowerShell |
+| [auditpolicy_auditor.ps1](./Windows/auditpolicy-auditor/) | Windows | No | PowerShell |
+| [bitlocker_auditor.ps1](./Windows/bitlocker-auditor/) | Windows | No | PowerShell |
 | [linux_user_auditor.py](./Linux/linux-user-auditor/) | Linux | No | Python |
 | [linux_firewall_auditor.py](./Linux/linux-firewall-auditor/) | Linux | No | Python |
 

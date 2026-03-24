@@ -34,6 +34,7 @@ KNOWN_PATTERNS = [
     "guardduty_report.json",
     "vpcflowlogs_report.json",
     "lambda_report.json",
+    "securityhub_report.json",
     # Azure (JSON output from Azure scripts if run with -Format json)
     "keyvault_report.json",
     "storage_report.json",
@@ -45,6 +46,9 @@ KNOWN_PATTERNS = [
     "ad_report.json",
     "localuser_report.json",
     "winfirewall_report.json",
+    "smbsigning_report.json",
+    "auditpolicy_report.json",
+    "bitlocker_report.json",
     # Linux on-prem
     "user_report.json",
     "fw_report.json",
@@ -62,6 +66,7 @@ PILLAR_LABELS = {
     "guardduty": "GuardDuty",
     "vpcflowlogs": "VPC Flow Logs",
     "lambda": "Lambda Functions",
+    "securityhub": "Security Hub",
     "keyvault": "Azure Key Vault",
     "storage": "Azure Storage",
     "nsg": "Azure NSGs",
@@ -71,6 +76,9 @@ PILLAR_LABELS = {
     "ad": "Active Directory",
     "localuser": "Local Users",
     "winfirewall": "Windows Firewall",
+    "smbsigning": "SMB Signing",
+    "auditpolicy": "Audit Policy",
+    "bitlocker": "BitLocker",
     "user": "Linux Users",
     "fw": "Linux Firewall",
 }

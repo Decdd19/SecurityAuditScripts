@@ -24,7 +24,8 @@ SecurityAuditScripts/
 │   ├── rds-auditor/                # RDS public access, encryption, backups, multi-AZ
 │   ├── guardduty-auditor/          # GuardDuty enablement, findings, protection plans
 │   ├── vpcflowlogs-auditor/        # VPC flow log coverage, traffic type, retention
-│   └── lambda-auditor/             # Lambda public URLs, IAM roles, secret env vars
+│   ├── lambda-auditor/             # Lambda public URLs, IAM roles, secret env vars
+│   └── securityhub-auditor/        # Security Hub enablement, findings, standards
 ├── tools/
 │   └── exec_summary.py             # Cross-cloud executive summary report (aggregates all JSON reports)
 ├── Azure/
@@ -40,7 +41,10 @@ SecurityAuditScripts/
     ├── Windows/
     │   ├── ad-auditor/             # Active Directory hygiene, Kerberoasting, delegation
     │   ├── localuser-auditor/      # Local users, registry, NTLM, LAPS, WDigest
-    │   └── winfirewall-auditor/    # Firewall profiles, open ports, rule analysis
+    │   ├── winfirewall-auditor/    # Firewall profiles, open ports, rule analysis
+    │   ├── smbsigning-auditor/     # SMB signing enforcement, NTLM relay prevention
+    │   ├── auditpolicy-auditor/    # Audit policy subcategories (process, logon, privilege)
+    │   └── bitlocker-auditor/      # BitLocker drive encryption status and method
     └── Linux/
         ├── linux-user-auditor/     # Users, sudo, SSH, password policy
         └── linux-firewall-auditor/ # iptables/nftables/ufw/firewalld, auditd, syslog
@@ -64,6 +68,7 @@ SecurityAuditScripts/
 | [GuardDuty Auditor](./AWS/guardduty-auditor/) | Checks GuardDuty enablement across all regions, active finding counts by severity, protection plan coverage (S3/EKS/Malware/RDS/Runtime), and findings export configuration. | JSON, CSV, HTML |
 | [VPC Flow Logs Auditor](./AWS/vpcflowlogs-auditor/) | Audits VPC flow log coverage per VPC per region. Flags missing logs (CRITICAL), ACCEPT/REJECT-only logs, default log format, and short CloudWatch retention periods. | JSON, CSV, HTML |
 | [Lambda Auditor](./AWS/lambda-auditor/) | Audits Lambda functions for public function URLs with no auth, overly-permissive IAM roles, secrets in environment variable names, deprecated runtimes, missing DLQs, and X-Ray tracing. | JSON, CSV, HTML |
+| [Security Hub Auditor](./AWS/securityhub-auditor/) | Checks Security Hub enablement across all regions, active finding counts by severity, and enabled compliance standards (CIS, PCI DSS, FSBP) with control pass rates. | JSON, CSV, HTML |
 
 ### Cross-Cloud
 
@@ -91,6 +96,9 @@ SecurityAuditScripts/
 | [Windows Firewall Auditor](./OnPrem/Windows/winfirewall-auditor/) | Audits Windows Firewall profiles and rules for disabled profiles, default-allow policies, and dangerous ports open to any source. | JSON, CSV, HTML |
 | [Linux User Auditor](./OnPrem/Linux/linux-user-auditor/) | Audits Linux user accounts, sudo rules, SSH configuration, password policy from login.defs, and stale accounts. | JSON, CSV, HTML |
 | [Linux Firewall Auditor](./OnPrem/Linux/linux-firewall-auditor/) | Auto-detects and audits iptables/nftables/ufw/firewalld. Also checks auditd rules and syslog configuration. | JSON, CSV, HTML |
+| [SMB Signing Auditor](./OnPrem/Windows/smbsigning-auditor/) | Checks SMB signing enforcement on server and client. Missing server-side enforcement allows NTLM relay attacks. | JSON, CSV, HTML |
+| [Audit Policy Auditor](./OnPrem/Windows/auditpolicy-auditor/) | Checks 15 critical Windows audit policy subcategories (logon, process creation, privilege use, etc.) against CIS baseline. | JSON, CSV, HTML |
+| [BitLocker Auditor](./OnPrem/Windows/bitlocker-auditor/) | Audits BitLocker drive encryption status, encryption method strength, TPM protector, and recovery password configuration. | JSON, CSV, HTML |
 
 ---
 
