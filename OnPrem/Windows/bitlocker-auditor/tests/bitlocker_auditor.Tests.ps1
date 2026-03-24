@@ -3,10 +3,8 @@ BeforeAll {
     function Get-Volume           { @() }
 
     . (Join-Path $PSScriptRoot '..' 'bitlocker_auditor.ps1')
-}
 
-# Helper: build a mock volume object
-function New-MockVolume {
+    function script:New-MockVolume {
     param(
         [string]$MountPoint       = 'C:',
         [string]$VolumeStatus     = 'FullyEncrypted',
@@ -24,7 +22,8 @@ function New-MockVolume {
         EncryptionMethod = $EncryptionMethod
         KeyProtector     = $KeyProtectors
     }
-}
+    }  # end New-MockVolume
+}  # end BeforeAll
 
 Describe 'Get-DriveFindings' {
     It 'Strong encryption and TPM gives LOW risk' {

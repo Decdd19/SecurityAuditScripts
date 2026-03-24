@@ -9,29 +9,29 @@ BeforeAll {
     function Get-AzDiagnosticSetting { param($ResourceId) @([PSCustomObject]@{ Name = 'default' }) }
 
     . "$PSScriptRoot/../keyvault_auditor.ps1"
-}
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+    # ── Helpers ──────────────────────────────────────────────────────────────
 
-function New-Vault {
-    param(
-        [string]$Name = 'test-vault',
-        [bool]$Rbac = $true,
-        [bool]$PurgeProtection = $true,
-        [object]$SoftDelete = $true,
-        [string]$ResourceId = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.KeyVault/vaults/test-vault'
-    )
-    [PSCustomObject]@{
-        VaultName                = $Name
-        ResourceGroupName        = 'test-rg'
-        EnableRbacAuthorization  = $Rbac
-        EnablePurgeProtection    = $PurgeProtection
-        EnableSoftDelete         = $SoftDelete
-        ResourceId               = $ResourceId
+    function script:New-Vault {
+        param(
+            [string]$Name = 'test-vault',
+            [bool]$Rbac = $true,
+            [bool]$PurgeProtection = $true,
+            [object]$SoftDelete = $true,
+            [string]$ResourceId = '/subscriptions/sub-001/resourceGroups/test-rg/providers/Microsoft.KeyVault/vaults/test-vault'
+        )
+        [PSCustomObject]@{
+            VaultName                = $Name
+            ResourceGroupName        = 'test-rg'
+            EnableRbacAuthorization  = $Rbac
+            EnablePurgeProtection    = $PurgeProtection
+            EnableSoftDelete         = $SoftDelete
+            ResourceId               = $ResourceId
+        }
     }
-}
 
-$Sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
+    $script:Sub = [PSCustomObject]@{ Id = 'sub-001'; Name = 'TestSub' }
+}
 
 # ── LegacyAccessPolicyModel ──────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ Describe 'Get-KeyVaultFindings — access model' {
     It 'flags vault using legacy access policy model (RBAC disabled)' {
         $vault = New-Vault -Rbac $false
         Mock Get-AzKeyVault { @($vault) }
-        $result = Get-KeyVaultFindings -Subscription $Sub
+        $result = Get-KeyVaultFindings -Subscription $script:Sub
         $f = $result.Findings | Where-Object FindingType -eq 'LegacyAccessPolicyModel'
         $f | Should -Not -BeNullOrEmpty
         $f.Severity | Should -Be 'HIGH'
@@ -49,7 +49,7 @@ Describe 'Get-KeyVaultFindings — access model' {
     It 'does not flag vault with RBAC enabled' {
         $vault = New-Vault -Rbac $true
         Mock Get-AzKeyVault { @($vault) }
-        $result = Get-KeyVaultFindings -Subscription $Sub
+        $result = Get-KeyVaultFindings -Subscription $script:Sub
         $result.Findings | Where-Object FindingType -eq 'LegacyAccessPolicyModel' | Should -BeNullOrEmpty
     }
 }
@@ -60,7 +60,7 @@ Describe 'Get-KeyVaultFindings — purge protection' {
     It 'flags vault with purge protection disabled' {
         $vault = New-Vault -PurgeProtection $false
         Mock Get-AzKeyVault { @($vault) }
-        $result = Get-KeyVaultFindings -Subscription $Sub
+        $result = Get-KeyVaultFindings -Subscription $script:Sub
         $f = $result.Findings | Where-Object FindingType -eq 'PurgeProtectionDisabled'
         $f | Should -Not -BeNullOrEmpty
         $f.Severity | Should -Be 'HIGH'
@@ -69,7 +69,7 @@ Describe 'Get-KeyVaultFindings — purge protection' {
     It 'does not flag vault with purge protection enabled' {
         $vault = New-Vault -PurgeProtection $true
         Mock Get-AzKeyVault { @($vault) }
-        $result = Get-KeyVaultFindings -Subscription $Sub
+        $result = Get-KeyVaultFindings -Subscription $script:Sub
         $result.Findings | Where-Object FindingType -eq 'PurgeProtectionDisabled' | Should -BeNullOrEmpty
     }
 }
@@ -80,7 +80,7 @@ Describe 'Get-KeyVaultFindings — soft delete' {
     It 'flags vault with soft delete explicitly disabled' {
         $vault = New-Vault -SoftDelete $false
         Mock Get-AzKeyVault { @($vault) }
-        $result = Get-KeyVaultFindings -Subscription $Sub
+        $result = Get-KeyVaultFindings -Subscription $script:Sub
         $f = $result.Findings | Where-Object FindingType -eq 'SoftDeleteDisabled'
         $f | Should -Not -BeNullOrEmpty
         $f.Severity | Should -Be 'CRITICAL'
@@ -89,7 +89,7 @@ Describe 'Get-KeyVaultFindings — soft delete' {
     It 'does not flag vault with soft delete enabled' {
         $vault = New-Vault -SoftDelete $true
         Mock Get-AzKeyVault { @($vault) }
-        $result = Get-KeyVaultFindings -Subscription $Sub
+        $result = Get-KeyVaultFindings -Subscription $script:Sub
         $result.Findings | Where-Object FindingType -eq 'SoftDeleteDisabled' | Should -BeNullOrEmpty
     }
 }
@@ -101,7 +101,7 @@ Describe 'Get-KeyVaultFindings — diagnostic logging' {
         $vault = New-Vault
         Mock Get-AzKeyVault { @($vault) }
         Mock Get-AzDiagnosticSetting { @() }
-        $result = Get-KeyVaultFindings -Subscription $Sub
+        $result = Get-KeyVaultFindings -Subscription $script:Sub
         $f = $result.Findings | Where-Object FindingType -eq 'NoDiagnosticLogging'
         $f | Should -Not -BeNullOrEmpty
         $f.Recommendation | Should -Match 'Diagnostic settings'
@@ -111,7 +111,7 @@ Describe 'Get-KeyVaultFindings — diagnostic logging' {
         $vault = New-Vault
         Mock Get-AzKeyVault { @($vault) }
         Mock Get-AzDiagnosticSetting { @([PSCustomObject]@{ Name = 'default' }) }
-        $result = Get-KeyVaultFindings -Subscription $Sub
+        $result = Get-KeyVaultFindings -Subscription $script:Sub
         $result.Findings | Where-Object FindingType -eq 'NoDiagnosticLogging' | Should -BeNullOrEmpty
     }
 }
@@ -125,7 +125,7 @@ Describe 'Get-KeyVaultFindings — secret expiry' {
         Mock Get-AzKeyVaultSecret {
             @([PSCustomObject]@{ Name = 'db-password'; Expires = [datetime]::UtcNow.AddDays(-5) })
         }
-        $result = Get-KeyVaultFindings -Subscription $Sub -ExpiryWarningDays 30
+        $result = Get-KeyVaultFindings -Subscription $script:Sub -ExpiryWarningDays 30
         $f = $result.Findings | Where-Object FindingType -eq 'SecretExpired'
         $f | Should -Not -BeNullOrEmpty
         $f.Severity | Should -Be 'CRITICAL'
@@ -139,7 +139,7 @@ Describe 'Get-KeyVaultFindings — secret expiry' {
         Mock Get-AzKeyVaultSecret {
             @([PSCustomObject]@{ Name = 'api-key'; Expires = [datetime]::UtcNow.AddDays(10) })
         }
-        $result = Get-KeyVaultFindings -Subscription $Sub -ExpiryWarningDays 30
+        $result = Get-KeyVaultFindings -Subscription $script:Sub -ExpiryWarningDays 30
         $f = $result.Findings | Where-Object FindingType -eq 'SecretExpiringSoon'
         $f | Should -Not -BeNullOrEmpty
         $f.ItemName | Should -Be 'api-key'
@@ -151,7 +151,7 @@ Describe 'Get-KeyVaultFindings — secret expiry' {
         Mock Get-AzKeyVaultSecret {
             @([PSCustomObject]@{ Name = 'no-expiry-secret'; Expires = $null })
         }
-        $result = Get-KeyVaultFindings -Subscription $Sub
+        $result = Get-KeyVaultFindings -Subscription $script:Sub
         $result.Findings | Where-Object { $_.ItemName -eq 'no-expiry-secret' } | Should -BeNullOrEmpty
     }
 
@@ -161,7 +161,7 @@ Describe 'Get-KeyVaultFindings — secret expiry' {
         Mock Get-AzKeyVaultSecret {
             @([PSCustomObject]@{ Name = 'future-secret'; Expires = [datetime]::UtcNow.AddDays(90) })
         }
-        $result = Get-KeyVaultFindings -Subscription $Sub -ExpiryWarningDays 30
+        $result = Get-KeyVaultFindings -Subscription $script:Sub -ExpiryWarningDays 30
         $result.Findings | Where-Object FindingType -like 'Secret*' | Should -BeNullOrEmpty
     }
 }
@@ -175,7 +175,7 @@ Describe 'Get-KeyVaultFindings — certificate expiry' {
         Mock Get-AzKeyVaultCertificate {
             @([PSCustomObject]@{ Name = 'tls-cert'; Expires = [datetime]::UtcNow.AddDays(-1) })
         }
-        $result = Get-KeyVaultFindings -Subscription $Sub -ExpiryWarningDays 30
+        $result = Get-KeyVaultFindings -Subscription $script:Sub -ExpiryWarningDays 30
         $f = $result.Findings | Where-Object FindingType -eq 'CertificateExpired'
         $f | Should -Not -BeNullOrEmpty
         $f.Severity | Should -Be 'CRITICAL'
@@ -187,7 +187,7 @@ Describe 'Get-KeyVaultFindings — certificate expiry' {
         Mock Get-AzKeyVaultCertificate {
             @([PSCustomObject]@{ Name = 'soon-cert'; Expires = [datetime]::UtcNow.AddDays(5) })
         }
-        $result = Get-KeyVaultFindings -Subscription $Sub -ExpiryWarningDays 30
+        $result = Get-KeyVaultFindings -Subscription $script:Sub -ExpiryWarningDays 30
         $f = $result.Findings | Where-Object FindingType -eq 'CertificateExpiringSoon'
         $f | Should -Not -BeNullOrEmpty
         $f.Severity | Should -Be 'CRITICAL'  # <=7 days → score 8 → CRITICAL
@@ -203,7 +203,7 @@ Describe 'Get-KeyVaultFindings — key expiry' {
         Mock Get-AzKeyVaultKey {
             @([PSCustomObject]@{ Name = 'cmk-key'; Expires = [datetime]::UtcNow.AddDays(-10) })
         }
-        $result = Get-KeyVaultFindings -Subscription $Sub -ExpiryWarningDays 30
+        $result = Get-KeyVaultFindings -Subscription $script:Sub -ExpiryWarningDays 30
         $f = $result.Findings | Where-Object FindingType -eq 'KeyExpired'
         $f | Should -Not -BeNullOrEmpty
         $f.Severity | Should -Be 'CRITICAL'
@@ -215,7 +215,7 @@ Describe 'Get-KeyVaultFindings — key expiry' {
 Describe 'Get-KeyVaultFindings — no vaults' {
     It 'returns zero findings when no vaults exist' {
         Mock Get-AzKeyVault { @() }
-        $result = Get-KeyVaultFindings -Subscription $Sub
+        $result = Get-KeyVaultFindings -Subscription $script:Sub
         $result.Findings.Count | Should -Be 0
         $result.VaultCount | Should -Be 0
     }
