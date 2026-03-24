@@ -33,6 +33,7 @@ KNOWN_PATTERNS = [
     "rds_report.json",
     "guardduty_report.json",
     "vpcflowlogs_report.json",
+    "lambda_report.json",
     # Azure (JSON output from Azure scripts if run with -Format json)
     "keyvault_report.json",
     "storage_report.json",
@@ -60,6 +61,7 @@ PILLAR_LABELS = {
     "rds": "RDS Databases",
     "guardduty": "GuardDuty",
     "vpcflowlogs": "VPC Flow Logs",
+    "lambda": "Lambda Functions",
     "keyvault": "Azure Key Vault",
     "storage": "Azure Storage",
     "nsg": "Azure NSGs",

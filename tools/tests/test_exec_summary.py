@@ -42,6 +42,7 @@ REPORT_PATTERNS = [
     "rds_report.json",
     "guardduty_report.json",
     "vpcflowlogs_report.json",
+    "lambda_report.json",
     "keyvault_report.json",
     "storage_report.json",
     "nsg_report.json",
