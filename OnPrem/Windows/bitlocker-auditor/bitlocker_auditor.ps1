@@ -130,7 +130,7 @@ function Get-DriveFindings {
     }
 
     if ($flags.Count -eq 0) {
-        $flags.Add("✅ Drive $mountPoint: BitLocker on, strong encryption ($encryptionMethod)")
+        $flags.Add("✅ Drive ${mountPoint}: BitLocker on, strong encryption (${encryptionMethod})")
         $rems.Add('')
     }
 

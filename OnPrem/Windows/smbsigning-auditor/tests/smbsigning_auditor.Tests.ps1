@@ -88,7 +88,7 @@ Describe 'Get-Flags' {
             ClientEnableSignature  = $true
         }
         $flags, $rems = Get-Flags -Status $status
-        ($flags | Where-Object { $_ -match '✅' }).Count | Should -BeGreaterThan 0
+        @($flags | Where-Object { $_ -match '✅' }).Count | Should -BeGreaterThan 0
     }
 
     It 'Flags and remediations have equal length' {
@@ -110,7 +110,7 @@ Describe 'Get-Flags' {
             ClientEnableSignature  = $false
         }
         $flags, $rems = Get-Flags -Status $status
-        ($flags | Where-Object { $_ -match '^ℹ️' }).Count | Should -BeGreaterThan 0
+        @($flags | Where-Object { $_ -match '^ℹ️' }).Count | Should -BeGreaterThan 0
     }
 }
 

@@ -177,8 +177,8 @@ function Invoke-AuditPolicyAudit {
     $summary = @{
         hostname         = $hostname
         total_checks     = $findings.Count
-        compliant        = ($findings | Where-Object { $_.compliant }).Count
-        non_compliant    = ($findings | Where-Object { -not $_.compliant }).Count
+        compliant        = @($findings | Where-Object { $_.compliant }).Count
+        non_compliant    = @($findings | Where-Object { -not $_.compliant }).Count
         overall_score    = $clampedScore
         overall_risk     = $overallRisk
     }
