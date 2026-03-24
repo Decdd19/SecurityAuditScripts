@@ -31,6 +31,7 @@ KNOWN_PATTERNS = [
     "iam_report.json",
     "ec2_report.json",
     "rds_report.json",
+    "guardduty_report.json",
     # Azure (JSON output from Azure scripts if run with -Format json)
     "storage_report.json",
     "nsg_report.json",
@@ -55,6 +56,7 @@ PILLAR_LABELS = {
     "iam": "IAM Privileges",
     "ec2": "EC2 Instances",
     "rds": "RDS Databases",
+    "guardduty": "GuardDuty",
     "storage": "Azure Storage",
     "nsg": "Azure NSGs",
     "activitylog": "Azure Activity Log",
