@@ -1,4 +1,4 @@
-"""Tests for iam_mapper_v2.py — remediation hints in HTML output."""
+"""Tests for iam_mapper_v2.py — remediation hints in HTML output and JSON flags."""
 import sys
 import os
 
@@ -97,3 +97,76 @@ def test_write_html_includes_remediation_for_admin_policy(tmp_path):
     content = open(path).read()
     assert "AdministratorAccess" in content
     assert "least-privilege" in content
+
+
+# ── _build_iam_flags ──────────────────────────────────────────────────────────
+
+_BASE_FINDING = {
+    "type": "user",
+    "name": "test",
+    "arn": "arn:aws:iam::123:user/test",
+    "risk_level": "HIGH",
+    "severity_score": 6,
+    "mfa_warning": False,
+    "has_admin_policy": False,
+    "cross_account_trust": False,
+    "privilege_escalation_paths": [],
+    "high_risk_actions": [],
+    "access_key_issues": [],
+    "permission_boundary": None,
+}
+
+
+def test_build_iam_flags_mfa_warning():
+    f = {**_BASE_FINDING, "mfa_warning": True}
+    flags, rems = iam_mapper._build_iam_flags(f)
+    assert any("No MFA" in fl for fl in flags)
+    assert any("MFA device" in r for r in rems)
+    assert len(flags) == len(rems)
+
+
+def test_build_iam_flags_admin_policy():
+    f = {**_BASE_FINDING, "has_admin_policy": True}
+    flags, rems = iam_mapper._build_iam_flags(f)
+    assert any("Admin Policy" in fl for fl in flags)
+    assert any("least-privilege" in r for r in rems)
+
+
+def test_build_iam_flags_high_risk_actions_uses_info_prefix():
+    """ℹ️ prefix triggers quick_wins in exec_summary for HIGH/CRITICAL findings."""
+    f = {**_BASE_FINDING, "high_risk_actions": ["iam:*", "ec2:*"]}
+    flags, rems = iam_mapper._build_iam_flags(f)
+    assert any(fl.startswith("ℹ️") for fl in flags)
+
+
+def test_build_iam_flags_privesc():
+    f = {**_BASE_FINDING, "privilege_escalation_paths": ["iam:PassRole → lambda:InvokeFunction"]}
+    flags, rems = iam_mapper._build_iam_flags(f)
+    assert any("Privilege Escalation" in fl for fl in flags)
+    assert any("PassRole" in r for r in rems)
+
+
+def test_build_iam_flags_boundary_is_positive():
+    f = {**_BASE_FINDING, "permission_boundary": "arn:aws:iam::123:policy/boundary"}
+    flags, rems = iam_mapper._build_iam_flags(f)
+    assert any("✅" in fl for fl in flags)
+
+
+def test_build_iam_flags_clean_finding_has_empty_lists():
+    flags, rems = iam_mapper._build_iam_flags(_BASE_FINDING)
+    assert flags == []
+    assert rems == []
+
+
+def test_build_iam_flags_parallel_lengths():
+    """flags and remediations must always have equal length."""
+    f = {
+        **_BASE_FINDING,
+        "mfa_warning": True,
+        "has_admin_policy": True,
+        "high_risk_actions": ["iam:*"],
+        "access_key_issues": ["Key AKIA... is 120 days old"],
+        "permission_boundary": "arn:aws:iam::123:policy/b",
+    }
+    flags, rems = iam_mapper._build_iam_flags(f)
+    assert len(flags) == len(rems), "flags and remediations lists must be the same length"

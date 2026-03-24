@@ -266,6 +266,66 @@ def check_access_keys(iam, username):
 
 # ── Principal analysers ───────────────────────────────────────────────────────
 
+def _build_iam_flags(finding):
+    """Build parallel flags/remediations lists from a finding dict.
+
+    Mirrors the conditions rendered by write_html so that the JSON report
+    carries the same actionable information as the HTML output.  The flags
+    list is what exec_summary.py reads for quick_wins (ℹ️-prefixed items on
+    HIGH/CRITICAL findings) and for the top-findings table.
+    """
+    flags = []
+    remediations = []
+
+    if finding.get("mfa_warning"):
+        flags.append("⚠️ No MFA")
+        remediations.append(
+            "Enable MFA: IAM Console → Users → select user → "
+            "Security credentials → Assign MFA device"
+        )
+
+    if finding.get("has_admin_policy"):
+        flags.append("⚠️ Admin Policy")
+        remediations.append(
+            "Review need for AdministratorAccess; replace with least-privilege "
+            "policies scoped to required services only"
+        )
+
+    if finding.get("cross_account_trust"):
+        flags.append("⚠️ Cross-Account Trust")
+        remediations.append(
+            "Review trust policy; ensure ExternalId condition is required; "
+            "scope to specific trusted principal ARNs"
+        )
+
+    if finding.get("privilege_escalation_paths"):
+        flags.append("⚠️ Privilege Escalation Path")
+        remediations.append(
+            "Remove the action(s) forming the escalation path; "
+            "review IAM PassRole usage; consider permission boundaries"
+        )
+
+    if finding.get("high_risk_actions"):
+        flags.append("ℹ️ High-Risk Actions")
+        remediations.append(
+            "Remove unused high-risk permissions; apply least-privilege; "
+            "use IAM Access Analyzer to identify unused access"
+        )
+
+    for issue in finding.get("access_key_issues", []):
+        flags.append(f"⚠️ Key: {issue}")
+        remediations.append(
+            "Rotate or deactivate the affected key: IAM Console → Users → "
+            "Security credentials → Access keys"
+        )
+
+    if finding.get("permission_boundary"):
+        flags.append("✅ Boundary Set")
+        remediations.append("")
+
+    return flags, remediations
+
+
 def analyse_user(iam, user, scp_denied):
     name = user["UserName"]
     arn = user["Arn"]
@@ -338,7 +398,7 @@ def analyse_user(iam, user, scp_denied):
         no_mfa, has_console, boundary is not None, False
     )
 
-    return {
+    finding = {
         "type": "user",
         "name": name,
         "arn": arn,
@@ -367,6 +427,8 @@ def analyse_user(iam, user, scp_denied):
         "total_actions_count": len(all_actions),
         "scp_restrictions_applied": len(scp_denied) > 0,
     }
+    finding["flags"], finding["remediations"] = _build_iam_flags(finding)
+    return finding
 
 
 def analyse_role(iam, role, scp_denied):
@@ -425,7 +487,7 @@ def analyse_role(iam, role, scp_denied):
         False, False, boundary is not None, cross_account
     )
 
-    return {
+    finding = {
         "type": "role",
         "name": name,
         "arn": arn,
@@ -441,6 +503,8 @@ def analyse_role(iam, role, scp_denied):
         "total_actions_count": len(all_actions),
         "scp_restrictions_applied": len(scp_denied) > 0,
     }
+    finding["flags"], finding["remediations"] = _build_iam_flags(finding)
+    return finding
 
 
 def analyse_group(iam, group, scp_denied):
@@ -478,7 +542,7 @@ def analyse_group(iam, group, scp_denied):
         False, False, False, False
     )
 
-    return {
+    finding = {
         "type": "group",
         "name": name,
         "arn": arn,
@@ -492,6 +556,8 @@ def analyse_group(iam, group, scp_denied):
         "total_actions_count": len(all_actions),
         "scp_restrictions_applied": len(scp_denied) > 0,
     }
+    finding["flags"], finding["remediations"] = _build_iam_flags(finding)
+    return finding
 
 
 # ── Output formatters ─────────────────────────────────────────────────────────
