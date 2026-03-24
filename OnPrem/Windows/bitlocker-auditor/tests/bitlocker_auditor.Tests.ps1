@@ -44,7 +44,7 @@ Describe 'Get-DriveFindings' {
         $vol = New-MockVolume -EncryptionMethod 'Aes128'
         $f = Get-DriveFindings -Volume $vol
         $f.severity_score | Should -BeGreaterOrEqual 4
-        ($f.flags | Where-Object { $_ -match 'weak' }).Count | Should -BeGreaterThan 0
+        @($f.flags | Where-Object { $_ -match 'weak' }).Count | Should -BeGreaterThan 0
     }
 
     It 'No TPM protector adds to score' {
@@ -53,7 +53,7 @@ Describe 'Get-DriveFindings' {
         )
         $f = Get-DriveFindings -Volume $vol
         $f.severity_score | Should -BeGreaterThan 0
-        ($f.flags | Where-Object { $_ -match 'TPM' }).Count | Should -BeGreaterThan 0
+        @($f.flags | Where-Object { $_ -match 'TPM' }).Count | Should -BeGreaterThan 0
     }
 
     It 'No recovery password adds info flag' {
@@ -61,7 +61,7 @@ Describe 'Get-DriveFindings' {
             [PSCustomObject]@{ KeyProtectorType = 'Tpm' }
         )
         $f = Get-DriveFindings -Volume $vol
-        ($f.flags | Where-Object { $_ -match 'recovery' }).Count | Should -BeGreaterThan 0
+        @($f.flags | Where-Object { $_ -match 'recovery' }).Count | Should -BeGreaterThan 0
     }
 
     It 'Flags and remediations have equal length' {
@@ -73,7 +73,7 @@ Describe 'Get-DriveFindings' {
     It 'Clean drive has positive flag' {
         $vol = New-MockVolume
         $f = Get-DriveFindings -Volume $vol
-        ($f.flags | Where-Object { $_ -match '✅' }).Count | Should -BeGreaterThan 0
+        @($f.flags | Where-Object { $_ -match '✅' }).Count | Should -BeGreaterThan 0
     }
 }
 
@@ -82,7 +82,7 @@ Describe 'Invoke-BitLockerAudit' {
         Mock Get-BitLockerVolume { @() }
         $report = Invoke-BitLockerAudit
         $report.findings[0].risk_level | Should -Not -BeNullOrEmpty
-        ($report.findings[0].flags | Where-Object { $_ -match 'No BitLocker' }).Count | Should -BeGreaterThan 0
+        @($report.findings[0].flags | Where-Object { $_ -match 'No BitLocker' }).Count | Should -BeGreaterThan 0
     }
 
     It 'Returns report with generated_at' {

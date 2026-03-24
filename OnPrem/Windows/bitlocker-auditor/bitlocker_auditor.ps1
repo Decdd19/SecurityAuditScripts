@@ -171,14 +171,15 @@ function Invoke-BitLockerAudit {
         }
     }
 
-    $maxScore = ($findings | Measure-Object severity_score -Maximum).Maximum
+    $maxScore = ($findings | ForEach-Object { $_.severity_score } | Measure-Object -Maximum).Maximum
+    if ($null -eq $maxScore) { $maxScore = 0 }
     $overallRisk = Get-SeverityLabel -Score $maxScore
 
     $summary = @{
         hostname       = $hostname
         total_drives   = $findings.Count
-        encrypted      = ($findings | Where-Object { $_.protection_status -eq 'On' }).Count
-        not_encrypted  = ($findings | Where-Object { $_.protection_status -ne 'On' }).Count
+        encrypted      = @($findings | Where-Object { $_.protection_status -eq 'On' }).Count
+        not_encrypted  = @($findings | Where-Object { $_.protection_status -ne 'On' }).Count
         overall_score  = $maxScore
         overall_risk   = $overallRisk
     }
