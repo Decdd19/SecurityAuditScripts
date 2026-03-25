@@ -108,11 +108,88 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         description="Security Audit Orchestrator — run all auditors in one command.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  python3 audit.py --client "Acme Corp" --aws --linux
-  python3 audit.py --client "Acme Corp" --all --profile prod --regions eu-west-1
-  python3 audit.py --windows    # print PS1 instructions only
-  python3 audit.py --s3 --ec2 --linux_user --client "Acme Corp"
+━━━ EXAMPLES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  # Full AWS + Linux audit for a client
+  python3 audit.py --client "Acme Corp" --aws --linux --output ./reports/
+
+  # Everything — AWS, Linux, plus PS1 instructions for Azure/Windows
+  python3 audit.py --client "Acme Corp" --all --profile prod
+
+  # Multi-region AWS scan
+  python3 audit.py --client "Acme Corp" --aws --profile prod --regions eu-west-1 us-east-1
+
+  # Cherry-pick specific auditors
+  python3 audit.py --client "Acme Corp" --s3 --ec2 --iam --linux_user
+
+  # Print Azure/Windows PS1 instructions only (no Python auditors run)
+  python3 audit.py --client "Acme Corp" --windows
+
+  # JSON output only, 8 parallel workers, open summary in browser when done
+  python3 audit.py --client "Acme Corp" --aws --format json --workers 8 --open
+
+━━━ AWS AUDITORS (--aws runs all 13) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  --s3           Bucket public access, encryption, versioning, logging
+  --ec2          Instance exposure, IMDSv2, security groups, EBS encryption  *
+  --sg           Security group rules, 0.0.0.0/0 ingress, unrestricted ports
+  --cloudtrail   Trail enabled, log validation, multi-region, S3 protection
+  --rds          Publicly accessible instances, encryption, backups, auth     *
+  --iam          Privilege mapping, admin roles, unused keys, policy review
+  --root         Root account MFA, access keys, last-used activity
+  --guardduty    Detector status, threat findings by severity                 *
+  --vpcflowlogs  Flow log coverage per VPC                                    *
+  --lambda       Function exposure, env var secrets, outdated runtimes        *
+  --securityhub  Standards compliance (CIS, FSBP), finding summary           *
+  --kms          Key rotation, cross-account access, disabled keys            *
+  --elb          HTTPS enforcement, SSL policies, access logging              *
+
+  * Supports --regions (multi-region scan). All others use the default region
+    from your AWS CLI profile.
+
+━━━ LINUX AUDITORS (--linux runs all 4) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  --linux_user      Local users, sudoers, password policy, SSH keys
+  --linux_firewall  iptables/nftables/ufw rules, default policy
+  --linux_sysctl    Kernel hardening parameters (net, fs, kernel namespaces)
+  --linux_patch     Installed packages vs available updates, CVE exposure
+
+  Run these directly on the target Linux host (not your workstation).
+
+━━━ AZURE / WINDOWS (--azure or --windows) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  These are PowerShell scripts that must run on a Windows machine with the
+  Az module installed. Passing --azure or --windows prints the commands to run
+  manually, then copy the JSON output back into the report folder so the
+  executive summary can include them.
+
+  Scripts: keyvault, storage, nsg, activitylog, subscription, entra, defender
+
+━━━ OUTPUT STRUCTURE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  {--output}/
+  └── {client}-{YYYY-MM-DD}/
+      ├── s3_report.json          ← per-auditor JSON report
+      ├── s3_report.html          ← per-auditor HTML report
+      ├── s3.log                  ← auditor stdout/stderr
+      ├── ec2_report.json
+      ├── ...
+      └── exec_summary.html       ← aggregated executive summary (auto-generated)
+
+  The executive summary is generated automatically after all auditors finish.
+  It aggregates findings across all reports, scores the environment, and
+  highlights top risks and quick wins.
+
+━━━ PREREQUISITES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  AWS auditors:   AWS CLI configured (aws configure / --profile)
+                  boto3 installed (pip install boto3)
+                  IAM permissions: SecurityAudit or ReadOnlyAccess policy
+
+  Linux auditors: Run on the target host as root or with sudo
+                  Python 3.8+ on the target host
+
+  This orchestrator: Python 3.10+, rich (pip install rich)
 """,
     )
 
@@ -125,14 +202,34 @@ Examples:
     groups.add_argument("--all",     action="store_true", help="Run all Python auditors + print PS1 instructions")
 
     # Individual AWS auditor flags
+    _aws_help = {
+        "s3":          "S3 bucket public access, encryption, versioning, logging",
+        "ec2":         "EC2 exposure, IMDSv2, EBS encryption [multi-region]",
+        "sg":          "Security group rules, unrestricted ingress",
+        "cloudtrail":  "CloudTrail enabled, log validation, S3 protection",
+        "rds":         "RDS public access, encryption, backups [multi-region]",
+        "iam":         "IAM privilege mapping, admin roles, unused keys",
+        "root":        "Root account MFA, access keys, activity",
+        "guardduty":   "GuardDuty detector status and threat findings [multi-region]",
+        "vpcflowlogs": "VPC flow log coverage per VPC [multi-region]",
+        "lambda":      "Lambda exposure, env var secrets, runtimes [multi-region]",
+        "securityhub": "Security Hub standards compliance and findings [multi-region]",
+        "kms":         "KMS key rotation, cross-account access [multi-region]",
+        "elb":         "ELB/ALB/NLB HTTPS enforcement, SSL policies [multi-region]",
+    }
     aws_ind = parser.add_argument_group("individual AWS auditors")
     for name in AWS_GROUP:
-        aws_ind.add_argument(f"--{name}", action="store_true", help=f"Run {name} auditor")
+        aws_ind.add_argument(f"--{name}", action="store_true", help=_aws_help.get(name, f"Run {name} auditor"))
 
-    # Individual Linux auditor flags
+    _linux_help = {
+        "linux_user":     "Local users, sudoers, password policy, SSH keys",
+        "linux_firewall": "iptables/nftables/ufw rules and default policy",
+        "linux_sysctl":   "Kernel hardening parameters",
+        "linux_patch":    "Package updates and CVE exposure",
+    }
     linux_ind = parser.add_argument_group("individual Linux auditors")
     for name in LINUX_GROUP:
-        linux_ind.add_argument(f"--{name}", action="store_true", help=f"Run {name} auditor")
+        linux_ind.add_argument(f"--{name}", action="store_true", help=_linux_help.get(name, f"Run {name} auditor"))
 
     # Runtime options
     opts = parser.add_argument_group("options")
