@@ -422,5 +422,59 @@ class TestWindowsInstructions(unittest.TestCase):
 import subprocess  # needed for TimeoutExpired in test
 
 
+# ── Email auditor integration tests ───────────────────────────────────────────
+
+def test_email_in_auditor_map():
+    """email key exists in AUDITOR_MAP with requires_domain=True."""
+    assert "email" in audit.AUDITOR_MAP
+    assert audit.AUDITOR_MAP["email"].requires_domain is True
+    assert audit.AUDITOR_MAP["email"].supports_regions is False
+
+
+def test_auditordef_requires_domain_default_false():
+    """AuditorDef.requires_domain defaults to False."""
+    defn = audit.AuditorDef(Path("/tmp/fake.py"), "fake_report")
+    assert defn.requires_domain is False
+
+
+def test_select_auditors_email_flag():
+    """--email flag selects email auditor."""
+    args = audit.parse_args(["--email", "--domain", "acme.ie", "--client", "test"])
+    selected, _ = audit.select_auditors(args)
+    assert "email" in selected
+
+
+def test_select_auditors_all_excludes_email():
+    """--all does NOT include email auditor."""
+    args = audit.parse_args(["--all", "--client", "test"])
+    selected, _ = audit.select_auditors(args)
+    assert "email" not in selected
+
+
+def test_main_email_without_domain_returns_error(capsys):
+    """main() with --email but no --domain prints error and returns 1."""
+    result = audit.main(["--email", "--client", "test"])
+    captured = capsys.readouterr()
+    assert result == 1
+    assert "--domain" in captured.out or "domain" in captured.out.lower()
+
+
+def test_build_cmd_injects_domain():
+    """build_cmd injects --domain for auditors with requires_domain=True."""
+    defn = audit.AuditorDef(Path("/tmp/fake.py"), "fake_report", requires_domain=True)
+    args = audit.parse_args(["--email", "--domain", "acme.ie", "--client", "test"])
+    cmd = audit.build_cmd("email", defn, Path("/tmp/out"), args)
+    assert "--domain" in cmd
+    assert "acme.ie" in cmd
+
+
+def test_build_cmd_no_domain_for_regular_auditors():
+    """build_cmd does NOT inject --domain for auditors with requires_domain=False."""
+    defn = audit.AuditorDef(Path("/tmp/fake.py"), "fake_report", requires_domain=False)
+    args = audit.parse_args(["--s3", "--domain", "acme.ie", "--client", "test"])
+    cmd = audit.build_cmd("s3", defn, Path("/tmp/out"), args)
+    assert "--domain" not in cmd
+
+
 if __name__ == "__main__":
     unittest.main()
