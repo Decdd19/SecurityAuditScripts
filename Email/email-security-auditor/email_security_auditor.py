@@ -357,3 +357,176 @@ def check_dmarc(domain: str) -> list:
         ))
 
     return findings
+
+
+# ── Orchestration ─────────────────────────────────────────────────────────────
+
+def run_all_checks(domain: str, selector: Optional[str]) -> list:
+    """Run all checks and return combined findings list."""
+    findings = []
+    findings.append(check_mx(domain))
+    findings.extend(check_spf(domain))
+    findings.extend(check_dkim(domain, selector))
+    findings.extend(check_dmarc(domain))
+    return findings
+
+
+def compute_overall_risk(findings: list) -> tuple:
+    """Return (overall_risk_level, total_severity_score) from findings list."""
+    score = sum(f.get('severity_score', 0) for f in findings if f.get('status') == 'FAIL')
+    has_critical = any(
+        f.get('risk_level') == 'CRITICAL' and f.get('status') == 'FAIL'
+        for f in findings
+    )
+    if has_critical or score >= 10:
+        return 'CRITICAL', score
+    if score >= 6:
+        return 'HIGH', score
+    if score >= 3:
+        return 'MEDIUM', score
+    return 'LOW', score
+
+
+# ── Output ────────────────────────────────────────────────────────────────────
+
+def write_json(report: dict, prefix: str) -> None:
+    path = Path(f"{prefix}.json")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, 'w') as f:
+        json.dump(report, f, indent=2, default=str)
+    log.info("JSON report: %s", path)
+
+
+def write_csv(findings: list, prefix: str) -> None:
+    path = Path(f"{prefix}.csv")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not findings:
+        return
+    fields = ['check_id', 'name', 'status', 'risk_level', 'severity_score', 'detail', 'remediation']
+    with open(path, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fields, extrasaction='ignore')
+        writer.writeheader()
+        writer.writerows(findings)
+    log.info("CSV report: %s", path)
+
+
+def write_html(report: dict, prefix: str) -> None:
+    path = Path(f"{prefix}.html")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    domain = report.get('domain', '')
+    summary = report.get('summary', {})
+    overall = summary.get('overall_risk', 'UNKNOWN')
+    score = summary.get('severity_score', 0)
+    generated = report.get('generated_at', '')
+
+    risk_colour = {'CRITICAL': '#dc3545', 'HIGH': '#fd7e14', 'MEDIUM': '#ffc107', 'LOW': '#28a745'}.get(overall, '#6c757d')
+    status_colour = {'PASS': '#28a745', 'FAIL': '#dc3545', 'WARN': '#ffc107'}
+
+    rows = ''
+    for f in report.get('findings', []):
+        sc = status_colour.get(f.get('status', ''), '#6c757d')
+        rows += (
+            f"<tr>"
+            f"<td>{f.get('check_id','')}</td>"
+            f"<td>{f.get('name','')}</td>"
+            f"<td style='color:{sc};font-weight:700'>{f.get('status','')}</td>"
+            f"<td>{f.get('risk_level','')}</td>"
+            f"<td>{f.get('detail','')}</td>"
+            f"<td>{f.get('remediation','')}</td>"
+            f"</tr>\n"
+        )
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>Email Security Audit — {domain}</title>
+<style>
+  body{{font-family:sans-serif;margin:2rem;background:#f8f9fa}}
+  h1{{color:#212529}} .badge{{display:inline-block;padding:4px 12px;border-radius:4px;
+  color:#fff;font-weight:700;background:{risk_colour}}}
+  table{{border-collapse:collapse;width:100%;background:#fff;border-radius:8px;overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.06)}}
+  th{{background:#343a40;color:#fff;padding:10px 14px;text-align:left}}
+  td{{padding:10px 14px;border-bottom:1px solid #dee2e6;vertical-align:top}}
+  tr:last-child td{{border-bottom:none}}
+</style></head><body>
+<h1>Email Security Audit</h1>
+<p><strong>Domain:</strong> {domain} &nbsp;
+   <strong>Risk:</strong> <span class="badge">{overall}</span> &nbsp;
+   <strong>Score:</strong> {score} &nbsp;
+   <strong>Generated:</strong> {generated}</p>
+<table>
+<thead><tr><th>ID</th><th>Check</th><th>Status</th><th>Risk</th><th>Detail</th><th>Remediation</th></tr></thead>
+<tbody>{rows}</tbody></table>
+</body></html>"""
+
+    path.write_text(html)
+    log.info("HTML report: %s", path)
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
+def run(domain: str, selector: Optional[str], output_prefix: str, fmt: str) -> dict:
+    """Run all email security checks for domain and write reports."""
+    findings = run_all_checks(domain, selector)
+    overall_risk, score = compute_overall_risk(findings)
+
+    # Extract summary flags
+    mx = next((f for f in findings if f['check_id'] == 'MX-01'), {})
+    spf01 = next((f for f in findings if f['check_id'] == 'SPF-01'), {})
+    spf02 = next((f for f in findings if f['check_id'] == 'SPF-02'), {})
+    dkim01 = next((f for f in findings if f['check_id'] == 'DKIM-01'), {})
+    dmarc02 = next((f for f in findings if f['check_id'] == 'DMARC-02'), {})
+
+    report = {
+        "domain": domain,
+        "generated_at": NOW.isoformat(),
+        "summary": {
+            "overall_risk": overall_risk,
+            "severity_score": score,
+            "mx_found": mx.get('status') == 'PASS',
+            "spf_valid": spf01.get('status') == 'PASS' and spf02.get('status') == 'PASS',
+            "dkim_found": dkim01.get('status') == 'PASS',
+            "dmarc_enforced": dmarc02.get('status') == 'PASS',
+            "dkim_selector_used": dkim01.get('dkim_selector_used'),
+        },
+        "findings": findings,
+        "pillar": "email",
+        "risk_level": overall_risk,
+    }
+
+    if fmt in ('json', 'all'):
+        write_json(report, output_prefix)
+    if fmt in ('csv', 'all'):
+        write_csv(findings, output_prefix)
+    if fmt in ('html', 'all'):
+        write_html(report, output_prefix)
+    if fmt == 'stdout':
+        print(json.dumps(report, indent=2, default=str))
+
+    # Console summary
+    r = overall_risk
+    col = {'CRITICAL': '\033[91m', 'HIGH': '\033[33m', 'MEDIUM': '\033[93m', 'LOW': '\033[92m'}.get(r, '')
+    end = '\033[0m'
+    print(f"\n{'='*44}")
+    print(f"  EMAIL SECURITY AUDIT -- {domain}")
+    print(f"{'-'*44}")
+    print(f"  Overall risk:  {col}{r}{end}")
+    print(f"  Score:         {score}")
+    print(f"  MX found:      {'Yes' if report['summary']['mx_found'] else 'No'}")
+    print(f"  SPF valid:     {'Yes' if report['summary']['spf_valid'] else 'No'}")
+    print(f"  DKIM found:    {'Yes' if report['summary']['dkim_found'] else 'No'}")
+    print(f"  DMARC enforced:{'Yes' if report['summary']['dmarc_enforced'] else 'No'}")
+    print(f"{'='*44}\n")
+
+    return report
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Email Security Auditor (SPF/DKIM/DMARC)')
+    parser.add_argument('--domain', required=True, help='Domain to audit (e.g. acme.ie)')
+    parser.add_argument('--selector', default=None, help='DKIM selector (auto-probed if omitted)')
+    parser.add_argument('--output', '-o', default='email_report', help='Output filename prefix')
+    parser.add_argument('--format', '-f', choices=['json', 'csv', 'html', 'all', 'stdout'],
+                        default='all')
+    args = parser.parse_args()
+    run(args.domain, args.selector, args.output, args.format)

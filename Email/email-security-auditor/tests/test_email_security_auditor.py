@@ -311,3 +311,71 @@ def test_dmarc_dns_error_warn():
         findings = esa.check_dmarc('example.com')
     dmarc01 = next(f for f in findings if f['check_id'] == 'DMARC-01')
     assert dmarc01['status'] == 'WARN'
+
+
+# ── Integration / run() tests ─────────────────────────────────────────────────
+
+_VALID_1024_KEY_FOR_RUN = (
+    "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC2a1TM2f9j6LLgHp7e"
+    "jLxR6HGkZq4K7b8G5pT1ZpViVqK9pAXFJxQR5V7Ukg0VdW9cFbbXWJDr"
+    "ZsD6oZHuFqxGQpBOdN+m6FQsBMrqJIB/ZRlCTkbWpX3pR2hWzxFd0KhB"
+    "XkT0c1tCgY0AiBnZM1c3FGcQa4M3bPNnYCrLbwIDAQAB"
+)
+
+
+def test_full_passing_domain_overall_risk_low():
+    """All checks pass → overall_risk LOW."""
+    good_spf = 'v=spf1 include:_spf.google.com -all'
+    good_dkim = f'v=DKIM1; k=rsa; p={_VALID_1024_KEY_FOR_RUN}'
+    good_dmarc = 'v=DMARC1; p=reject; rua=mailto:dmarc@example.com'
+
+    def fake_txt(name):
+        if name == 'example.com':
+            return [good_spf]
+        if '_domainkey' in name:
+            return [good_dkim]
+        if '_dmarc' in name:
+            return [good_dmarc]
+        return []
+
+    with patch.object(esa, 'query_mx', return_value=['mail.example.com.']), \
+         patch.object(esa, 'query_txt', side_effect=fake_txt):
+        report = esa.run('example.com', None, '/tmp/test_email_pass', 'json')
+
+    assert report['summary']['overall_risk'] == 'LOW'
+
+
+def test_full_failing_domain_overall_risk_critical():
+    """All checks fail → overall_risk CRITICAL."""
+    with patch.object(esa, 'query_mx', return_value=[]), \
+         patch.object(esa, 'query_txt', return_value=[]):
+        report = esa.run('example.com', None, '/tmp/test_email_fail', 'json')
+
+    assert report['summary']['overall_risk'] == 'CRITICAL'
+
+
+def test_run_produces_json_file(tmp_path):
+    """run() with format=json creates a .json file."""
+    prefix = str(tmp_path / 'email_report')
+    with patch.object(esa, 'query_mx', return_value=[]), \
+         patch.object(esa, 'query_txt', return_value=[]):
+        esa.run('example.com', None, prefix, 'json')
+    assert (tmp_path / 'email_report.json').exists()
+
+
+def test_run_produces_html_file(tmp_path):
+    """run() with format=html creates a .html file."""
+    prefix = str(tmp_path / 'email_report')
+    with patch.object(esa, 'query_mx', return_value=[]), \
+         patch.object(esa, 'query_txt', return_value=[]):
+        esa.run('example.com', None, prefix, 'html')
+    assert (tmp_path / 'email_report.html').exists()
+
+
+def test_run_produces_csv_file(tmp_path):
+    """run() with format=csv creates a .csv file."""
+    prefix = str(tmp_path / 'email_report')
+    with patch.object(esa, 'query_mx', return_value=[]), \
+         patch.object(esa, 'query_txt', return_value=[]):
+        esa.run('example.com', None, prefix, 'csv')
+    assert (tmp_path / 'email_report.csv').exists()
