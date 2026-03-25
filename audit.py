@@ -331,7 +331,7 @@ def build_cmd(name: str, defn: AuditorDef, client_dir: Path, args: argparse.Name
     output_path = str(client_dir / defn.output_prefix)
     cmd = [sys.executable, str(defn.script), "--output", output_path, "--format", args.format]
 
-    if args.profile:
+    if args.profile and name in AWS_GROUP:
         cmd += ["--profile", args.profile]
 
     if args.regions and defn.supports_regions:
