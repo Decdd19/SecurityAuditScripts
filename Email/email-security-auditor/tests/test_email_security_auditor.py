@@ -75,3 +75,30 @@ def test_query_mx_no_answer_returns_empty():
     with patch('dns.resolver.resolve', side_effect=dns.resolver.NoAnswer):
         result = esa.query_mx('nomx.example.com')
     assert result == []
+
+
+# ── MX check tests ────────────────────────────────────────────────────────────
+
+def test_check_mx_found():
+    """MX record found → PASS, risk LOW."""
+    with patch.object(esa, 'query_mx', return_value=['mail.example.com.']):
+        finding = esa.check_mx('example.com')
+    assert finding['check_id'] == 'MX-01'
+    assert finding['status'] == 'PASS'
+    assert finding['risk_level'] == 'LOW'
+
+
+def test_check_mx_missing():
+    """No MX record → FAIL, detail mentions parked domain."""
+    with patch.object(esa, 'query_mx', return_value=[]):
+        finding = esa.check_mx('example.com')
+    assert finding['status'] == 'FAIL'
+    assert 'parked' in finding['detail'].lower() or 'no mail' in finding['detail'].lower()
+    assert 'DMARC' in finding['remediation']
+
+
+def test_check_mx_dns_error():
+    """DNS transient error → WARN."""
+    with patch.object(esa, 'query_mx', return_value=None):
+        finding = esa.check_mx('example.com')
+    assert finding['status'] == 'WARN'

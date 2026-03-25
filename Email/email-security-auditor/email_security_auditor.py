@@ -73,3 +73,45 @@ def query_mx(domain: str) -> Optional[list]:
         return []
     except (dns.resolver.NoNameservers, dns.exception.Timeout, dns.exception.DNSException):
         return None
+
+
+# ── Finding helpers ───────────────────────────────────────────────────────────
+
+def _finding(check_id: str, name: str, status: str, risk_level: str,
+             severity_score: int, detail: str, remediation: str) -> dict:
+    return {
+        "check_id": check_id,
+        "name": name,
+        "status": status,
+        "risk_level": risk_level,
+        "severity_score": severity_score if status == "FAIL" else 0,
+        "detail": detail,
+        "remediation": remediation,
+        "pillar": "email",
+    }
+
+
+# ── MX check ──────────────────────────────────────────────────────────────────
+
+def check_mx(domain: str) -> dict:
+    """MX-01: Verify at least one MX record exists."""
+    records = query_mx(domain)
+    if records is None:
+        return _finding(
+            "MX-01", "MX Record Exists", "WARN", "LOW", 0,
+            "DNS query failed — result may be incomplete",
+            "Retry when DNS is available",
+        )
+    if not records:
+        return _finding(
+            "MX-01", "MX Record Exists", "FAIL", "LOW", 1,
+            f"No MX records found for {domain}. Domain appears to have no active mail exchange. "
+            "Note: DMARC enforcement is still recommended to prevent spoofing of parked domains.",
+            "If this domain sends email, add MX records pointing to your mail provider. "
+            "Regardless, configure DMARC to prevent domain spoofing.",
+        )
+    return _finding(
+        "MX-01", "MX Record Exists", "PASS", "LOW", 0,
+        f"MX records found: {', '.join(records[:3])}",
+        "",
+    )
