@@ -115,3 +115,69 @@ def check_mx(domain: str) -> dict:
         f"MX records found: {', '.join(records[:3])}",
         "",
     )
+
+
+# ── SPF checks ────────────────────────────────────────────────────────────────
+
+_SPF_LOOKUP_MECHS = re.compile(r'\b(include|a|mx|ptr|exists):', re.IGNORECASE)
+
+
+def check_spf(domain: str) -> list:
+    """SPF-01, SPF-02, SPF-03: existence, permissiveness, lookup count."""
+    txts = query_txt(domain)
+
+    if txts is None:
+        return [_finding(
+            "SPF-01", "SPF Record Exists", "WARN", "HIGH", 0,
+            "DNS query failed — result may be incomplete",
+            "Retry when DNS is available",
+        )]
+
+    spf_record = next((t for t in txts if t.strip().startswith('v=spf1')), None)
+
+    if not spf_record:
+        return [_finding(
+            "SPF-01", "SPF Record Exists", "FAIL", "HIGH", 4,
+            f"No SPF TXT record found for {domain}",
+            "Add a TXT record: v=spf1 include:<your-mail-provider> -all",
+        )]
+
+    findings = [_finding(
+        "SPF-01", "SPF Record Exists", "PASS", "HIGH", 0,
+        f"SPF record found: {spf_record[:120]}",
+        "",
+    )]
+
+    # SPF-02: permissiveness
+    if '+all' in spf_record or '?all' in spf_record:
+        qualifier = '+all' if '+all' in spf_record else '?all'
+        findings.append(_finding(
+            "SPF-02", "SPF Not Permissive", "FAIL", "CRITICAL", 8,
+            f"SPF record uses '{qualifier}' — allows any server to send as {domain}",
+            f"Change '{qualifier}' to '-all' (reject) or '~all' (softfail). "
+            "Current setting renders SPF useless.",
+        ))
+    else:
+        findings.append(_finding(
+            "SPF-02", "SPF Not Permissive", "PASS", "CRITICAL", 0,
+            "SPF record does not use permissive +all or ?all qualifier",
+            "",
+        ))
+
+    # SPF-03: shallow lookup count
+    count = len(_SPF_LOOKUP_MECHS.findall(spf_record))
+    if count > 10:
+        findings.append(_finding(
+            "SPF-03", "SPF Lookup Count", "FAIL", "MEDIUM", 2,
+            f"SPF record has {count} lookup mechanisms (limit is 10) — "
+            "may cause legitimate email to be rejected",
+            "Reduce SPF includes by consolidating mail providers or using macros.",
+        ))
+    else:
+        findings.append(_finding(
+            "SPF-03", "SPF Lookup Count", "PASS", "MEDIUM", 0,
+            f"SPF record has {count} lookup mechanism(s) — within the limit of 10",
+            "",
+        ))
+
+    return findings

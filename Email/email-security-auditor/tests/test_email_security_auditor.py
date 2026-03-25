@@ -102,3 +102,70 @@ def test_check_mx_dns_error():
     with patch.object(esa, 'query_mx', return_value=None):
         finding = esa.check_mx('example.com')
     assert finding['status'] == 'WARN'
+
+
+# ── SPF check tests ───────────────────────────────────────────────────────────
+
+def test_spf_missing():
+    """No SPF record → SPF-01 FAIL HIGH."""
+    with patch.object(esa, 'query_txt', return_value=[]):
+        findings = esa.check_spf('example.com')
+    spf01 = next(f for f in findings if f['check_id'] == 'SPF-01')
+    assert spf01['status'] == 'FAIL'
+    assert spf01['risk_level'] == 'HIGH'
+
+
+def test_spf_plus_all_critical():
+    """SPF with +all → SPF-02 CRITICAL FAIL."""
+    with patch.object(esa, 'query_txt', return_value=['v=spf1 include:_spf.google.com +all']):
+        findings = esa.check_spf('example.com')
+    spf02 = next(f for f in findings if f['check_id'] == 'SPF-02')
+    assert spf02['status'] == 'FAIL'
+    assert spf02['risk_level'] == 'CRITICAL'
+
+
+def test_spf_question_all_critical():
+    """SPF with ?all → SPF-02 CRITICAL FAIL."""
+    with patch.object(esa, 'query_txt', return_value=['v=spf1 include:_spf.google.com ?all']):
+        findings = esa.check_spf('example.com')
+    spf02 = next(f for f in findings if f['check_id'] == 'SPF-02')
+    assert spf02['status'] == 'FAIL'
+    assert spf02['risk_level'] == 'CRITICAL'
+
+
+def test_spf_tilde_all_pass():
+    """SPF with ~all → SPF-01 and SPF-02 both PASS."""
+    with patch.object(esa, 'query_txt', return_value=['v=spf1 include:_spf.google.com ~all']):
+        findings = esa.check_spf('example.com')
+    spf01 = next(f for f in findings if f['check_id'] == 'SPF-01')
+    spf02 = next(f for f in findings if f['check_id'] == 'SPF-02')
+    assert spf01['status'] == 'PASS'
+    assert spf02['status'] == 'PASS'
+
+
+def test_spf_lookup_count_pass():
+    """SPF with ≤10 mechanisms → SPF-03 PASS."""
+    spf = 'v=spf1 include:a.com include:b.com include:c.com ~all'
+    with patch.object(esa, 'query_txt', return_value=[spf]):
+        findings = esa.check_spf('example.com')
+    spf03 = next(f for f in findings if f['check_id'] == 'SPF-03')
+    assert spf03['status'] == 'PASS'
+
+
+def test_spf_lookup_count_fail():
+    """SPF with >10 mechanisms → SPF-03 MEDIUM FAIL."""
+    mechs = ' '.join(f'include:{i}.example.com' for i in range(11))
+    spf = f'v=spf1 {mechs} ~all'
+    with patch.object(esa, 'query_txt', return_value=[spf]):
+        findings = esa.check_spf('example.com')
+    spf03 = next(f for f in findings if f['check_id'] == 'SPF-03')
+    assert spf03['status'] == 'FAIL'
+    assert spf03['risk_level'] == 'MEDIUM'
+
+
+def test_spf_dns_error_warn():
+    """DNS transient error on SPF lookup → SPF-01 WARN."""
+    with patch.object(esa, 'query_txt', return_value=None):
+        findings = esa.check_spf('example.com')
+    spf01 = next(f for f in findings if f['check_id'] == 'SPF-01')
+    assert spf01['status'] == 'WARN'
