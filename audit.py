@@ -161,13 +161,9 @@ def select_auditors(args: argparse.Namespace):
         show_ps1 = True
     else:
         if args.aws:
-            for name in AWS_GROUP:
-                if name not in selected:
-                    selected.append(name)
+            selected.extend(AWS_GROUP)
         if args.linux:
-            for name in LINUX_GROUP:
-                if name not in selected:
-                    selected.append(name)
+            selected.extend(LINUX_GROUP)
         if args.azure or args.windows:
             show_ps1 = True
 
@@ -246,7 +242,8 @@ def run_auditor(
 
     except Exception as exc:
         duration = time.monotonic() - start
-        log_file.write_text(f"Orchestrator error: {exc}\n")
+        with log_file.open("a") as lf:
+            lf.write(f"Orchestrator error: {exc}\n")
         progress.update(task_id, description=f"[red]FAILED ✗[/red] {name}", advance=1)
         return AuditorResult(name=name, status="FAILED", duration=duration,
                              returncode=-1, log_file=log_file)
