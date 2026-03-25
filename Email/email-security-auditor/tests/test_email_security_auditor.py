@@ -245,3 +245,61 @@ def test_dkim02_absent_when_dkim01_fails():
     check_ids = [f['check_id'] for f in findings]
     assert 'DKIM-01' in check_ids
     assert 'DKIM-02' not in check_ids
+
+
+# ── DMARC check tests ─────────────────────────────────────────────────────────
+
+def test_dmarc_missing():
+    """No DMARC record → DMARC-01 FAIL HIGH."""
+    with patch.object(esa, 'query_txt', return_value=[]):
+        findings = esa.check_dmarc('example.com')
+    dmarc01 = next(f for f in findings if f['check_id'] == 'DMARC-01')
+    assert dmarc01['status'] == 'FAIL'
+    assert dmarc01['risk_level'] == 'HIGH'
+
+
+def test_dmarc_policy_none():
+    """DMARC p=none → DMARC-02 FAIL HIGH."""
+    txt = 'v=DMARC1; p=none; rua=mailto:dmarc@example.com'
+    with patch.object(esa, 'query_txt', return_value=[txt]):
+        findings = esa.check_dmarc('example.com')
+    dmarc02 = next(f for f in findings if f['check_id'] == 'DMARC-02')
+    assert dmarc02['status'] == 'FAIL'
+    assert dmarc02['risk_level'] == 'HIGH'
+
+
+def test_dmarc_policy_quarantine():
+    """DMARC p=quarantine → DMARC-02 PASS."""
+    txt = 'v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com'
+    with patch.object(esa, 'query_txt', return_value=[txt]):
+        findings = esa.check_dmarc('example.com')
+    dmarc02 = next(f for f in findings if f['check_id'] == 'DMARC-02')
+    assert dmarc02['status'] == 'PASS'
+
+
+def test_dmarc_policy_reject():
+    """DMARC p=reject → DMARC-02 PASS."""
+    txt = 'v=DMARC1; p=reject; rua=mailto:dmarc@example.com'
+    with patch.object(esa, 'query_txt', return_value=[txt]):
+        findings = esa.check_dmarc('example.com')
+    dmarc02 = next(f for f in findings if f['check_id'] == 'DMARC-02')
+    assert dmarc02['status'] == 'PASS'
+
+
+def test_dmarc_with_rua():
+    """DMARC with rua= tag → DMARC-03 PASS."""
+    txt = 'v=DMARC1; p=reject; rua=mailto:dmarc@example.com'
+    with patch.object(esa, 'query_txt', return_value=[txt]):
+        findings = esa.check_dmarc('example.com')
+    dmarc03 = next(f for f in findings if f['check_id'] == 'DMARC-03')
+    assert dmarc03['status'] == 'PASS'
+
+
+def test_dmarc_without_rua():
+    """DMARC without rua= tag → DMARC-03 FAIL MEDIUM."""
+    txt = 'v=DMARC1; p=reject'
+    with patch.object(esa, 'query_txt', return_value=[txt]):
+        findings = esa.check_dmarc('example.com')
+    dmarc03 = next(f for f in findings if f['check_id'] == 'DMARC-03')
+    assert dmarc03['status'] == 'FAIL'
+    assert dmarc03['risk_level'] == 'MEDIUM'

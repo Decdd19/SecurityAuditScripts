@@ -290,3 +290,70 @@ def check_dkim(domain: str, selector: Optional[str]) -> list:
         )
 
     return [dkim01, dkim02]
+
+
+# ── DMARC checks ──────────────────────────────────────────────────────────────
+
+def check_dmarc(domain: str) -> list:
+    """DMARC-01, DMARC-02, DMARC-03: existence, policy enforcement, reporting."""
+    dmarc_name = f"_dmarc.{domain}"
+    txts = query_txt(dmarc_name)
+
+    if txts is None:
+        return [_finding(
+            "DMARC-01", "DMARC Record Exists", "WARN", "HIGH", 0,
+            "DNS query failed — result may be incomplete",
+            "Retry when DNS is available",
+        )]
+
+    record = next((t for t in txts if 'v=DMARC1' in t), None)
+
+    if not record:
+        return [_finding(
+            "DMARC-01", "DMARC Record Exists", "FAIL", "HIGH", 4,
+            f"No DMARC record found at {dmarc_name}",
+            f"Add a TXT record at _dmarc.{domain}: "
+            "v=DMARC1; p=quarantine; rua=mailto:dmarc@yourdomain.com",
+        )]
+
+    findings = [_finding(
+        "DMARC-01", "DMARC Record Exists", "PASS", "HIGH", 0,
+        f"DMARC record found: {record[:120]}",
+        "",
+    )]
+
+    # DMARC-02: policy
+    policy_match = re.search(r'\bp=(\w+)', record)
+    policy = policy_match.group(1).lower() if policy_match else 'none'
+
+    if policy in ('quarantine', 'reject'):
+        findings.append(_finding(
+            "DMARC-02", "DMARC Policy Enforced", "PASS", "HIGH", 0,
+            f"DMARC policy is '{policy}' — spoofed emails will be {policy}d",
+            "",
+        ))
+    else:
+        findings.append(_finding(
+            "DMARC-02", "DMARC Policy Enforced", "FAIL", "HIGH", 4,
+            f"DMARC policy is 'p={policy}' — no enforcement, spoofed emails are delivered",
+            "Change p=none to p=quarantine (sends to spam) or p=reject (blocks delivery). "
+            "Start with p=quarantine, monitor rua reports, then move to p=reject.",
+        ))
+
+    # DMARC-03: reporting
+    if 'rua=' in record:
+        findings.append(_finding(
+            "DMARC-03", "DMARC Reporting Configured", "PASS", "MEDIUM", 0,
+            "DMARC aggregate reporting (rua=) is configured",
+            "",
+        ))
+    else:
+        findings.append(_finding(
+            "DMARC-03", "DMARC Reporting Configured", "FAIL", "MEDIUM", 2,
+            "DMARC record has no aggregate reporting address (rua= missing) — "
+            "you will not receive reports of spoofing attempts",
+            "Add rua=mailto:dmarc@yourdomain.com to your DMARC record. "
+            "Consider a free DMARC reporting service (e.g. postmaster.google.com).",
+        ))
+
+    return findings
