@@ -52,6 +52,13 @@ KNOWN_PATTERNS = [
     # Linux on-prem
     "user_report.json",
     "fw_report.json",
+    "sysctl_report.json",
+    "patch_report.json",
+    # Additional AWS
+    "kms_report.json",
+    "elb_report.json",
+    # Additional Azure
+    "defender_report.json",
 ]
 
 # Human-readable names for display
@@ -81,6 +88,11 @@ PILLAR_LABELS = {
     "bitlocker": "BitLocker",
     "user": "Linux Users",
     "fw": "Linux Firewall",
+    "sysctl": "Linux Sysctl Hardening",
+    "patch": "Linux Patch Status",
+    "kms": "AWS KMS Keys",
+    "elb": "Load Balancers",
+    "defender": "Defender for Cloud",
 }
 
 GRADE_COLOURS = {
