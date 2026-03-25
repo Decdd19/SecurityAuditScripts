@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -270,6 +271,57 @@ def select_auditors(args: argparse.Namespace):
                 selected.append(name)
 
     return selected, show_ps1
+
+
+# ── Pre-flight checks ─────────────────────────────────────────────────────────
+
+def preflight_check(selected: List[str], args: argparse.Namespace) -> bool:
+    """Validate prerequisites before launching any auditors. Returns True if all pass."""
+    errors: List[str] = []
+
+    aws_selected = any(name in AWS_GROUP for name in selected)
+    linux_selected = any(name in LINUX_GROUP for name in selected)
+
+    if aws_selected:
+        # Check boto3 is installed
+        try:
+            import importlib
+            boto3 = importlib.import_module("boto3")
+        except ImportError:
+            errors.append("boto3 not installed — run: pip install boto3")
+            boto3 = None
+
+        if boto3 is not None:
+            # Check credentials are valid
+            try:
+                session = boto3.Session(profile_name=args.profile)
+                identity = session.client("sts").get_caller_identity()
+                account = identity["Account"]
+                caller = identity["Arn"].split("/")[-1]
+                console.print(f"[green]✓ AWS credentials valid[/green] — account [bold]{account}[/bold] ({caller})")
+            except Exception as exc:
+                hint = f"--profile {args.profile}" if args.profile else "aws configure"
+                errors.append(
+                    f"AWS credentials not valid: {exc}\n"
+                    f"  Fix: {hint}"
+                )
+
+    if linux_selected:
+        if os.geteuid() != 0:
+            errors.append(
+                "Linux auditors require root privileges\n"
+                "  Fix: re-run with sudo python3 audit.py ..."
+            )
+        else:
+            console.print("[green]✓ Running as root[/green] — Linux auditors ready")
+
+    if errors:
+        console.print("\n[bold red]Pre-flight checks failed — fix these before running:[/bold red]\n")
+        for err in errors:
+            console.print(f"  [red]✗[/red] {err}\n")
+        return False
+
+    return True
 
 
 # ── Command building ──────────────────────────────────────────────────────────
@@ -537,6 +589,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             "Use --aws, --linux, --all, --windows, or individual flags.\n"
             "Run [bold]python3 audit.py --help[/bold] for usage."
         )
+        return 1
+
+    if selected and not preflight_check(selected, args):
         return 1
 
     today = date.today().strftime("%Y-%m-%d")
