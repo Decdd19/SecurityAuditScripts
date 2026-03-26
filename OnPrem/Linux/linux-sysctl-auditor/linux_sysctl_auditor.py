@@ -224,8 +224,8 @@ def write_html(report, path):
     rows = ''
     for r in findings:
         color = _row_color(r)
-        compliant_label = 'N/A' if r['compliant'] is None else ('Yes' if r['compliant'] else 'No')
-        status_icon = '\u2139\ufe0f' if r['compliant'] is None else ('\u2705' if r['compliant'] else '\u26a0\ufe0f')
+        compliant_label = 'SKIP' if r['compliant'] is None else ('PASS' if r['compliant'] else 'FAIL')
+        status_icon = '\u2139\ufe0f' if r['compliant'] is None else ('\u2705' if r['compliant'] else '\u274c')
         remediation = r.get('remediation') or ''
         rows += f"""
         <tr>
