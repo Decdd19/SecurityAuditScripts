@@ -249,11 +249,11 @@ Connect-AzAccount
 - `dnspython` (`pip install dnspython`)
 - No credentials required — DNS queries only
 
-### Network (SSL/TLS)
+### Network
 
 - Python 3.8+
-- No external dependencies (stdlib only: `ssl`, `socket`, `datetime`)
-- No credentials required — outbound TCP port 443 only
+- No external dependencies (stdlib only)
+- No credentials required — outbound TCP/HTTPS port 443 only
 
 ### On-Premises
 
@@ -320,17 +320,19 @@ sudo python3 OnPrem/Linux/linux-user-auditor/linux_user_auditor.py --format html
 sudo python3 OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py --format all
 ```
 
-### Network / SSL-TLS
+### Network
 ```bash
 git clone https://github.com/Decdd19/SecurityAuditScripts.git
 cd SecurityAuditScripts
 
-# Standalone (no dependencies)
+# Standalone — no dependencies required
 python3 Network/ssl-tls-auditor/ssl_tls_auditor.py --domain acme.ie --format all
+python3 Network/http-headers-auditor/http_headers_auditor.py --domain acme.ie --format all
 
 # Via orchestrator
 python3 audit.py --client "Acme Corp" --ssl --domain acme.ie
-python3 audit.py --client "Acme Corp" --email --ssl --domain acme.ie
+python3 audit.py --client "Acme Corp" --http-headers --domain acme.ie
+python3 audit.py --client "Acme Corp" --ssl --http-headers --domain acme.ie
 ```
 
 ---
