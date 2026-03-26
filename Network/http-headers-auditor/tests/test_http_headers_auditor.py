@@ -95,3 +95,23 @@ def test_finding_severity_score_zero_for_pass():
 def test_finding_severity_score_zero_for_warn():
     f = hha._finding("HDR-01", "X-Frame-Options", "WARN", "HIGH", 7, "weak", "fix")
     assert f["severity_score"] == 0
+
+
+# ── HDR-00: Connectivity ──────────────────────────────────────────────────────
+
+def test_check_connectivity_pass():
+    conn = make_conn()
+    f = hha.check_connectivity(conn, "acme.ie", 443)
+    assert f["check_id"] == "HDR-00"
+    assert f["status"] == "PASS"
+    assert f["severity_score"] == 0
+
+
+def test_check_connectivity_fail_on_none():
+    f = hha.check_connectivity(None, "acme.ie", 443)
+    assert f["check_id"] == "HDR-00"
+    assert f["status"] == "FAIL"
+    assert f["risk_level"] == "CRITICAL"
+    assert f["severity_score"] == 10
+    assert "acme.ie" in f["detail"]
+    assert "443" in f["detail"]

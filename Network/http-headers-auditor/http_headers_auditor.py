@@ -72,3 +72,21 @@ def _finding(check_id: str, name: str, status: str, risk_level: str,
         "remediation": remediation,
         "pillar": "headers",
     }
+
+
+# ── HDR-00: Connectivity ───────────────────────────────────────────────────────
+
+def check_connectivity(conn: Optional[dict], domain: str, port: int) -> dict:
+    """HDR-00: Verify we can establish an HTTPS connection to domain:port."""
+    if conn is None:
+        return _finding(
+            "HDR-00", "HTTP Headers Connectivity", "FAIL", "CRITICAL", 10,
+            f"Could not establish HTTPS connection to {domain}:{port}. "
+            "Host may be unreachable, port closed, or TLS not enabled.",
+            "Verify the server is running and accessible on port 443. "
+            "Check firewall rules and that TLS is configured.",
+        )
+    return _finding(
+        "HDR-00", "HTTP Headers Connectivity", "PASS", "CRITICAL", 0,
+        f"HTTPS connection established to {domain}:{port}", "",
+    )
