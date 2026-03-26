@@ -208,18 +208,18 @@ def write_html(report, path):
     hostname  = report.get('hostname', 'unknown')
 
     severity_colors = {
-        'CRITICAL': '#c0392b',
-        'HIGH':     '#e67e22',
-        'MEDIUM':   '#f1c40f',
-        'LOW':      '#27ae60',
+        'CRITICAL': '#dc3545',
+        'HIGH':     '#fd7e14',
+        'MEDIUM':   '#ffc107',
+        'LOW':      '#28a745',
     }
 
     def _row_color(result):
         if result['compliant'] is None:
             return '#95a5a6'   # grey — unavailable
         if result['compliant']:
-            return '#27ae60'   # green
-        return severity_colors.get(result['severity_if_wrong'], '#e67e22')
+            return '#28a745'   # green
+        return severity_colors.get(result['severity_if_wrong'], '#fd7e14')
 
     rows = ''
     for r in findings:
@@ -235,10 +235,10 @@ def write_html(report, path):
             <td style="font-family:monospace">{r['expected']}</td>
             <td style="font-family:monospace">{r['actual']}</td>
             <td style="font-size:0.85em">{r['description']}</td>
-            <td style="font-size:0.8em;color:#27ae60">{remediation}</td>
+            <td style="font-size:0.8em;color:#28a745">{remediation}</td>
         </tr>"""
 
-    risk_color = severity_colors.get(summary['overall_risk'], '#27ae60')
+    risk_color = severity_colors.get(summary['overall_risk'], '#28a745')
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -247,18 +247,18 @@ def write_html(report, path):
 <title>Linux Sysctl Hardening Audit Report</title>
 <style>
   body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
-  .header {{ background: linear-gradient(135deg, #2c3e50, #27ae60); color: white; padding: 30px 40px; }}
+  .header {{ background: linear-gradient(135deg, #2c3e50, #28a745); color: white; padding: 30px 40px; }}
   .header h1 {{ margin: 0; font-size: 1.8em; }}
   .header p {{ margin: 5px 0 0; opacity: 0.8; }}
   .summary {{ display: flex; gap: 20px; padding: 20px 40px; flex-wrap: wrap; }}
   .card {{ background: white; border-radius: 8px; padding: 20px 30px; flex: 1; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
   .card .num {{ font-size: 2.5em; font-weight: bold; }}
   .card .label {{ color: #666; font-size: 0.9em; margin-top: 4px; }}
-  .compliant .num {{ color: #27ae60; }}
-  .noncompliant .num {{ color: #e67e22; }}
-  .high .num {{ color: #e67e22; }}
-  .medium .num {{ color: #f39c12; }}
-  .low .num {{ color: #27ae60; }}
+  .compliant .num {{ color: #28a745; }}
+  .noncompliant .num {{ color: #fd7e14; }}
+  .high .num {{ color: #fd7e14; }}
+  .medium .num {{ color: #ffc107; }}
+  .low .num {{ color: #28a745; }}
   .total .num {{ color: #3498db; }}
   .risk-badge {{ display: inline-block; background: {risk_color}; color: white; border-radius: 6px; padding: 4px 14px; font-weight: bold; font-size: 1.1em; }}
   .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}

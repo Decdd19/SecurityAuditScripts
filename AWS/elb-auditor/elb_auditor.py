@@ -340,10 +340,10 @@ def write_html(report, path):
     generated = report.get("generated_at", "")
 
     risk_colors = {
-        "CRITICAL": "#c0392b",
-        "HIGH": "#e67e22",
-        "MEDIUM": "#f39c12",
-        "LOW": "#27ae60",
+        "CRITICAL": "#dc3545",
+        "HIGH": "#fd7e14",
+        "MEDIUM": "#ffc107",
+        "LOW": "#28a745",
     }
 
     rows = ""
@@ -371,9 +371,9 @@ def write_html(report, path):
         lb_type = f.get("lb_type", "")
         scheme = f.get("scheme", "")
         scheme_badge = (
-            '<span style="background:#c0392b;color:white;padding:1px 6px;border-radius:3px">internet-facing</span>'
+            '<span style="background:#dc3545;color:white;padding:1px 6px;border-radius:3px">internet-facing</span>'
             if scheme == "internet-facing"
-            else '<span style="background:#27ae60;color:white;padding:1px 6px;border-radius:3px">internal</span>'
+            else '<span style="background:#28a745;color:white;padding:1px 6px;border-radius:3px">internal</span>'
         )
         tls_cell = "✅" if (f.get("ssl_policies_found") and not f.get("outdated_ssl_policy")) else ("❌" if f.get("outdated_ssl_policy") else "—")
         redirect_val = f.get("http_redirect_to_https")
@@ -421,10 +421,10 @@ def write_html(report, path):
   .card {{ border-left: 4px solid #ccc; padding: 12px 20px; min-width: 120px; }}
   .card .num {{ font-size: 2em; font-weight: 700; }}
   .card .label {{ font-size: 0.8em; color: #666; text-transform: uppercase; }}
-  .card.critical {{ border-left-color: #c0392b; }} .card.critical .num {{ color: #c0392b; }}
-  .card.high {{ border-left-color: #e67e22; }} .card.high .num {{ color: #e67e22; }}
-  .card.medium {{ border-left-color: #f39c12; }} .card.medium .num {{ color: #856404; }}
-  .card.low {{ border-left-color: #27ae60; }} .card.low .num {{ color: #27ae60; }}
+  .card.critical {{ border-left-color: #dc3545; }} .card.critical .num {{ color: #dc3545; }}
+  .card.high {{ border-left-color: #fd7e14; }} .card.high .num {{ color: #fd7e14; }}
+  .card.medium {{ border-left-color: #ffc107; }} .card.medium .num {{ color: #856404; }}
+  .card.low {{ border-left-color: #28a745; }} .card.low .num {{ color: #28a745; }}
   .table-wrap {{ padding: 24px 40px 40px; overflow-x: auto; }}
   table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06); }}
   th {{ background: #232f3e; color: white; padding: 10px 14px; text-align: left; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }}
@@ -447,10 +447,10 @@ def write_html(report, path):
   <div class="card high"><div class="num">{summary.get('high', 0)}</div><div class="label">High</div></div>
   <div class="card medium"><div class="num">{summary.get('medium', 0)}</div><div class="label">Medium</div></div>
   <div class="card low"><div class="num">{summary.get('low', 0)}</div><div class="label">Low</div></div>
-  <div class="card" style="border-left-color:#c0392b"><div class="num" style="color:#c0392b">{summary.get('no_access_logs', 0)}</div><div class="label">No Access Logs</div></div>
+  <div class="card" style="border-left-color:#dc3545"><div class="num" style="color:#dc3545">{summary.get('no_access_logs', 0)}</div><div class="label">No Access Logs</div></div>
   <div class="card" style="border-left-color:#e74c3c"><div class="num" style="color:#e74c3c">{summary.get('http_no_redirect', 0)}</div><div class="label">HTTP No Redirect</div></div>
-  <div class="card" style="border-left-color:#e67e22"><div class="num" style="color:#e67e22">{summary.get('outdated_ssl_policy', 0)}</div><div class="label">Outdated TLS</div></div>
-  <div class="card" style="border-left-color:#f39c12"><div class="num" style="color:#f39c12">{summary.get('no_waf', 0)}</div><div class="label">No WAF</div></div>
+  <div class="card" style="border-left-color:#fd7e14"><div class="num" style="color:#fd7e14">{summary.get('outdated_ssl_policy', 0)}</div><div class="label">Outdated TLS</div></div>
+  <div class="card" style="border-left-color:#ffc107"><div class="num" style="color:#ffc107">{summary.get('no_waf', 0)}</div><div class="label">No WAF</div></div>
 </div>
 <div class="table-wrap">
   <table>

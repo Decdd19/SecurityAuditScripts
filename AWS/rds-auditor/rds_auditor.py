@@ -415,9 +415,9 @@ def write_html(report, path):
   <div class="card high"><div class="num">{summary.get('high',0)}</div><div class="label">High</div></div>
   <div class="card medium"><div class="num">{summary.get('medium',0)}</div><div class="label">Medium</div></div>
   <div class="card low"><div class="num">{summary.get('low',0)}</div><div class="label">Low</div></div>
-  <div class="card" style="border-left:4px solid #c0392b"><div class="num" style="color:#c0392b">{summary.get('public_instances',0)}</div><div class="label">Public</div></div>
-  <div class="card" style="border-left:4px solid #e67e22"><div class="num" style="color:#e67e22">{summary.get('unencrypted_instances',0)}</div><div class="label">Unencrypted</div></div>
-  <div class="card" style="border-left:4px solid #f39c12"><div class="num" style="color:#f39c12">{summary.get('no_backups',0)}</div><div class="label">No Backups</div></div>
+  <div class="card" style="border-left:4px solid #dc3545"><div class="num" style="color:#dc3545">{summary.get('public_instances',0)}</div><div class="label">Public</div></div>
+  <div class="card" style="border-left:4px solid #fd7e14"><div class="num" style="color:#fd7e14">{summary.get('unencrypted_instances',0)}</div><div class="label">Unencrypted</div></div>
+  <div class="card" style="border-left:4px solid #ffc107"><div class="num" style="color:#ffc107">{summary.get('no_backups',0)}</div><div class="label">No Backups</div></div>
 </div>
 <div class="table-wrap">
   <table>

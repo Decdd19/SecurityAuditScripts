@@ -421,7 +421,7 @@ def write_csv(findings, path):
 def write_html(report, path):
     f = report["finding"]
     generated = report["generated_at"]
-    risk_colors = {"CRITICAL": "#c0392b", "HIGH": "#e67e22", "MEDIUM": "#f1c40f", "LOW": "#27ae60"}
+    risk_colors = {"CRITICAL": "#dc3545", "HIGH": "#fd7e14", "MEDIUM": "#ffc107", "LOW": "#28a745"}
     color = risk_colors.get(f["risk_level"], "#999")
     flags_list = f.get("flags", [])
     rems_list = f.get("remediations", [])
@@ -462,7 +462,7 @@ def write_html(report, path):
 <title>Root Account Audit Report</title>
 <style>
   body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
-  .header {{ background: linear-gradient(135deg, #2c3e50, #c0392b); color: white; padding: 30px 40px; }}
+  .header {{ background: linear-gradient(135deg, #2c3e50, #dc3545); color: white; padding: 30px 40px; }}
   .header h1 {{ margin: 0; font-size: 1.8em; }}
   .header p {{ margin: 5px 0 0; opacity: 0.8; }}
   .content {{ padding: 30px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
@@ -510,7 +510,7 @@ def write_html(report, path):
   </div>
   <div class="card">
     <h2>Password Policy Issues</h2>
-    {'<ul>' + policy_html + '</ul>' if policy_html else '<p style="color:#27ae60">✅ No major policy issues</p>'}
+    {'<ul>' + policy_html + '</ul>' if policy_html else '<p style="color:#28a745">✅ No major policy issues</p>'}
   </div>
   <div class="card">
     <h2>Alternate Contacts</h2>

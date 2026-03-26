@@ -310,10 +310,10 @@ def write_html(report, path):
     backend = report['firewall_backend']
 
     risk_colors = {
-        'CRITICAL': '#c0392b',
-        'HIGH': '#e67e22',
-        'MEDIUM': '#f1c40f',
-        'LOW': '#27ae60',
+        'CRITICAL': '#dc3545',
+        'HIGH': '#fd7e14',
+        'MEDIUM': '#ffc107',
+        'LOW': '#28a745',
     }
 
     rows = ''
@@ -346,8 +346,8 @@ def write_html(report, path):
   .card {{ background: white; border-radius: 8px; padding: 20px 30px; flex: 1; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
   .card .num {{ font-size: 2.5em; font-weight: bold; }}
   .card .label {{ color: #666; font-size: 0.9em; margin-top: 4px; }}
-  .critical .num {{ color: #c0392b; }} .high .num {{ color: #e67e22; }}
-  .medium .num {{ color: #f39c12; }} .low .num {{ color: #27ae60; }}
+  .critical .num {{ color: #dc3545; }} .high .num {{ color: #fd7e14; }}
+  .medium .num {{ color: #ffc107; }} .low .num {{ color: #28a745; }}
   .total .num {{ color: #3498db; }}
   .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}
   table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}

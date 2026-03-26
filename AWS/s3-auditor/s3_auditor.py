@@ -315,7 +315,7 @@ def write_html(report, path):
     summary = report["summary"]
     generated = report["generated_at"]
 
-    risk_colors = {"CRITICAL": "#c0392b", "HIGH": "#e67e22", "MEDIUM": "#f1c40f", "LOW": "#27ae60"}
+    risk_colors = {"CRITICAL": "#dc3545", "HIGH": "#fd7e14", "MEDIUM": "#ffc107", "LOW": "#28a745"}
 
     rows = ""
     for f in findings:
@@ -335,7 +335,7 @@ def write_html(report, path):
             flag_items.append(f'<div class="flag-item"><span class="flag-text">{html.escape(flag)}</span></div>')
         flags_html = "".join(flag_items) or "None"
         policy_html = "<br>".join(html.escape(pf) for pf in f.get("policy_findings", [])) or "None"
-        public_badge = '<span style="background:#c0392b;color:white;padding:1px 6px;border-radius:3px">PUBLIC</span>' if f["is_public"] else '<span style="background:#27ae60;color:white;padding:1px 6px;border-radius:3px">PRIVATE</span>'
+        public_badge = '<span style="background:#dc3545;color:white;padding:1px 6px;border-radius:3px">PUBLIC</span>' if f["is_public"] else '<span style="background:#28a745;color:white;padding:1px 6px;border-radius:3px">PRIVATE</span>'
         _enc_raw = f.get("encryption_algorithm") or ""
         enc = html.escape(_enc_raw) if _enc_raw else "❌ None"
         name_escaped = html.escape(f["name"])
@@ -368,8 +368,8 @@ def write_html(report, path):
   .card {{ background: white; border-radius: 8px; padding: 20px 30px; flex: 1; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
   .card .num {{ font-size: 2.5em; font-weight: bold; }}
   .card .label {{ color: #666; font-size: 0.9em; margin-top: 4px; }}
-  .critical .num {{ color: #c0392b; }} .high .num {{ color: #e67e22; }}
-  .medium .num {{ color: #f39c12; }} .low .num {{ color: #27ae60; }}
+  .critical .num {{ color: #dc3545; }} .high .num {{ color: #fd7e14; }}
+  .medium .num {{ color: #ffc107; }} .low .num {{ color: #28a745; }}
   .total .num {{ color: #3498db; }}
   .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}
   table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
@@ -394,9 +394,9 @@ def write_html(report, path):
   <div class="card high"><div class="num">{summary['high']}</div><div class="label">High</div></div>
   <div class="card medium"><div class="num">{summary['medium']}</div><div class="label">Medium</div></div>
   <div class="card low"><div class="num">{summary['low']}</div><div class="label">Low</div></div>
-  <div class="card" style="border-left:4px solid #c0392b"><div class="num" style="color:#c0392b">{summary['public_buckets']}</div><div class="label">Public Buckets</div></div>
-  <div class="card" style="border-left:4px solid #e67e22"><div class="num" style="color:#e67e22">{summary['unencrypted_buckets']}</div><div class="label">No Encryption</div></div>
-  <div class="card" style="border-left:4px solid #f39c12"><div class="num" style="color:#f39c12">{summary['no_versioning']}</div><div class="label">No Versioning</div></div>
+  <div class="card" style="border-left:4px solid #dc3545"><div class="num" style="color:#dc3545">{summary['public_buckets']}</div><div class="label">Public Buckets</div></div>
+  <div class="card" style="border-left:4px solid #fd7e14"><div class="num" style="color:#fd7e14">{summary['unencrypted_buckets']}</div><div class="label">No Encryption</div></div>
+  <div class="card" style="border-left:4px solid #ffc107"><div class="num" style="color:#ffc107">{summary['no_versioning']}</div><div class="label">No Versioning</div></div>
   <div class="card" style="border-left:4px solid #95a5a6"><div class="num" style="color:#95a5a6">{summary['no_logging']}</div><div class="label">No Logging</div></div>
 </div>
 <div class="table-wrap">

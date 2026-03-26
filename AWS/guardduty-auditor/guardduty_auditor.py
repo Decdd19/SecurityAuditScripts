@@ -421,7 +421,7 @@ def write_html(report, path):
   .flag-item {{ margin-bottom: 4px; }}
   .flag-text {{ display: block; font-weight: 500; }}
   .rem-text {{ display: block; color: #666; font-size: 0.85em; padding-left: 8px; }}
-  .disabled-banner {{ margin: 0 40px 20px; padding: 12px 20px; background: #fdf3e3; border-left: 4px solid #e67e22; border-radius: 4px; font-size: 0.9em; }}
+  .disabled-banner {{ margin: 0 40px 20px; padding: 12px 20px; background: #fdf3e3; border-left: 4px solid #fd7e14; border-radius: 4px; font-size: 0.9em; }}
 </style>
 </head>
 <body>

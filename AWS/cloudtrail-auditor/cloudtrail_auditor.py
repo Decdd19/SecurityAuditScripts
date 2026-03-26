@@ -325,7 +325,7 @@ def write_html(report, path):
     generated = report["generated_at"]
     uncovered = report.get("uncovered_regions", [])
 
-    risk_colors = {"CRITICAL": "#c0392b", "HIGH": "#e67e22", "MEDIUM": "#f1c40f", "LOW": "#27ae60"}
+    risk_colors = {"CRITICAL": "#dc3545", "HIGH": "#fd7e14", "MEDIUM": "#ffc107", "LOW": "#28a745"}
 
     rows = ""
     for f in findings:
@@ -362,7 +362,7 @@ def write_html(report, path):
     uncovered_html = ""
     if uncovered:
         uncovered_html = f"""
-        <div style="margin: 0 40px 20px; padding: 15px 20px; background: #fdf3e3; border-left: 4px solid #e67e22; border-radius: 4px;">
+        <div style="margin: 0 40px 20px; padding: 15px 20px; background: #fdf3e3; border-left: 4px solid #fd7e14; border-radius: 4px;">
             <strong>⚠️ Regions with no CloudTrail coverage ({len(uncovered)}):</strong><br>
             <span style="font-size:0.9em">{', '.join(html.escape(r) for r in uncovered)}</span>
         </div>"""
@@ -381,8 +381,8 @@ def write_html(report, path):
   .card {{ background: white; border-radius: 8px; padding: 20px 30px; flex: 1; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
   .card .num {{ font-size: 2.5em; font-weight: bold; }}
   .card .label {{ color: #666; font-size: 0.9em; margin-top: 4px; }}
-  .critical .num {{ color: #c0392b; }} .high .num {{ color: #e67e22; }}
-  .medium .num {{ color: #f39c12; }} .low .num {{ color: #27ae60; }}
+  .critical .num {{ color: #dc3545; }} .high .num {{ color: #fd7e14; }}
+  .medium .num {{ color: #ffc107; }} .low .num {{ color: #28a745; }}
   .total .num {{ color: #3498db; }}
   .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}
   table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
@@ -407,9 +407,9 @@ def write_html(report, path):
   <div class="card high"><div class="num">{summary['high']}</div><div class="label">High</div></div>
   <div class="card medium"><div class="num">{summary['medium']}</div><div class="label">Medium</div></div>
   <div class="card low"><div class="num">{summary['low']}</div><div class="label">Low</div></div>
-  <div class="card" style="border-left:4px solid #c0392b"><div class="num" style="color:#c0392b">{summary['trails_not_logging']}</div><div class="label">Not Logging</div></div>
-  <div class="card" style="border-left:4px solid #e67e22"><div class="num" style="color:#e67e22">{summary['uncovered_regions']}</div><div class="label">Uncovered Regions</div></div>
-  <div class="card" style="border-left:4px solid #f39c12"><div class="num" style="color:#f39c12">{summary['no_kms']}</div><div class="label">No KMS</div></div>
+  <div class="card" style="border-left:4px solid #dc3545"><div class="num" style="color:#dc3545">{summary['trails_not_logging']}</div><div class="label">Not Logging</div></div>
+  <div class="card" style="border-left:4px solid #fd7e14"><div class="num" style="color:#fd7e14">{summary['uncovered_regions']}</div><div class="label">Uncovered Regions</div></div>
+  <div class="card" style="border-left:4px solid #ffc107"><div class="num" style="color:#ffc107">{summary['no_kms']}</div><div class="label">No KMS</div></div>
   <div class="card" style="border-left:4px solid #95a5a6"><div class="num" style="color:#95a5a6">{summary['no_cloudwatch']}</div><div class="label">No CloudWatch</div></div>
 </div>
 {uncovered_html}

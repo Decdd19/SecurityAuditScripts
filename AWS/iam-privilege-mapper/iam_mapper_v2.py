@@ -601,10 +601,10 @@ def write_html(report, path):
     generated = report["generated_at"]
 
     risk_colors = {
-        "CRITICAL": "#c0392b",
-        "HIGH": "#e67e22",
-        "MEDIUM": "#f1c40f",
-        "LOW": "#27ae60",
+        "CRITICAL": "#dc3545",
+        "HIGH": "#fd7e14",
+        "MEDIUM": "#ffc107",
+        "LOW": "#28a745",
     }
 
     rows = ""
@@ -686,7 +686,7 @@ def write_html(report, path):
             <td>{name_escaped}</td>
             <td style="font-size:0.8em;color:#666">{arn_escaped}</td>
             <td style="font-size:0.85em">{high_risk}{high_risk_rem}</td>
-            <td style="font-size:0.85em;color:#c0392b">{privesc}{privesc_rem}</td>
+            <td style="font-size:0.85em;color:#dc3545">{privesc}{privesc_rem}</td>
             <td style="font-size:0.85em">{key_issues}</td>
             <td style="font-size:0.85em">{warning_html}</td>
         </tr>"""
@@ -706,10 +706,10 @@ def write_html(report, path):
            box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
   .card .num {{ font-size: 2.5em; font-weight: bold; }}
   .card .label {{ color: #666; font-size: 0.9em; margin-top: 4px; }}
-  .critical .num {{ color: #c0392b; }}
-  .high .num {{ color: #e67e22; }}
-  .medium .num {{ color: #f39c12; }}
-  .low .num {{ color: #27ae60; }}
+  .critical .num {{ color: #dc3545; }}
+  .high .num {{ color: #fd7e14; }}
+  .medium .num {{ color: #ffc107; }}
+  .low .num {{ color: #28a745; }}
   .total .num {{ color: #3498db; }}
   .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}
   table {{ width: 100%; border-collapse: collapse; background: white;
@@ -736,7 +736,7 @@ def write_html(report, path):
   <div class="card medium"><div class="num">{summary.get('medium', 0)}</div><div class="label">Medium</div></div>
   <div class="card low"><div class="num">{summary['low']}</div><div class="label">Low</div></div>
   <div class="card" style="border-left: 4px solid #e74c3c"><div class="num" style="color:#e74c3c">{summary['users_without_mfa']}</div><div class="label">No MFA (console users)</div></div>
-  <div class="card" style="border-left: 4px solid #e67e22"><div class="num" style="color:#e67e22">{summary.get('stale_keys', 0)}</div><div class="label">Stale Access Keys</div></div>
+  <div class="card" style="border-left: 4px solid #fd7e14"><div class="num" style="color:#fd7e14">{summary.get('stale_keys', 0)}</div><div class="label">Stale Access Keys</div></div>
   <div class="card" style="border-left: 4px solid #9b59b6"><div class="num" style="color:#9b59b6">{summary.get('cross_account_roles', 0)}</div><div class="label">Cross-Account Roles</div></div>
 </div>
 <div class="table-wrap">

@@ -406,10 +406,10 @@ def write_html(report, path):
     kernel = report.get('kernel', 'unknown')
 
     risk_colors = {
-        'CRITICAL': '#c0392b',
-        'HIGH': '#e67e22',
-        'MEDIUM': '#f39c12',
-        'LOW': '#27ae60',
+        'CRITICAL': '#dc3545',
+        'HIGH': '#fd7e14',
+        'MEDIUM': '#ffc107',
+        'LOW': '#28a745',
     }
     risk = summary.get('overall_risk', 'UNKNOWN')
     risk_color = risk_colors.get(risk, '#999')
@@ -472,7 +472,7 @@ def write_html(report, path):
   <div class="card"><div class="num">{total_str}</div><div class="label">Total Updates</div></div>
   <div class="card"><div class="num" style="color:#e74c3c">{security_str}</div><div class="label">Security Updates</div></div>
   <div class="card"><div class="num">{days_str}</div><div class="label">Days Since Update</div></div>
-  <div class="card"><div class="num" style="color:{'#27ae60' if auto_enabled else '#e74c3c'}">{auto_str}</div><div class="label">Auto-Updates</div></div>
+  <div class="card"><div class="num" style="color:{'#28a745' if auto_enabled else '#e74c3c'}">{auto_str}</div><div class="label">Auto-Updates</div></div>
   <div class="card risk"><div class="num">{risk}</div><div class="label">Overall Risk</div></div>
 </div>
 <div class="detail-wrap">

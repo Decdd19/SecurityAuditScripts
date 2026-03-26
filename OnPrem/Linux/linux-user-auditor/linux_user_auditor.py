@@ -221,10 +221,10 @@ def write_html(report, path):
     hostname = report.get('hostname', 'unknown')
 
     risk_colors = {
-        'CRITICAL': '#c0392b',
-        'HIGH': '#e67e22',
-        'MEDIUM': '#f1c40f',
-        'LOW': '#27ae60',
+        'CRITICAL': '#dc3545',
+        'HIGH': '#fd7e14',
+        'MEDIUM': '#ffc107',
+        'LOW': '#28a745',
     }
 
     rows = ''
@@ -237,7 +237,7 @@ def write_html(report, path):
             <td>{f['finding_type']}</td>
             <td>{f.get('username', '')}</td>
             <td style="font-size:0.85em">{f.get('detail', '')}</td>
-            <td style="font-size:0.85em;color:#27ae60">{f.get('recommendation', '')}</td>
+            <td style="font-size:0.85em;color:#28a745">{f.get('recommendation', '')}</td>
         </tr>"""
 
     html = f"""<!DOCTYPE html>
@@ -247,15 +247,15 @@ def write_html(report, path):
 <title>Linux User Audit Report</title>
 <style>
   body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
-  .header {{ background: linear-gradient(135deg, #2c3e50, #c0392b); color: white; padding: 30px 40px; }}
+  .header {{ background: linear-gradient(135deg, #2c3e50, #dc3545); color: white; padding: 30px 40px; }}
   .header h1 {{ margin: 0; font-size: 1.8em; }}
   .header p {{ margin: 5px 0 0; opacity: 0.8; }}
   .summary {{ display: flex; gap: 20px; padding: 20px 40px; flex-wrap: wrap; }}
   .card {{ background: white; border-radius: 8px; padding: 20px 30px; flex: 1; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
   .card .num {{ font-size: 2.5em; font-weight: bold; }}
   .card .label {{ color: #666; font-size: 0.9em; margin-top: 4px; }}
-  .critical .num {{ color: #c0392b; }} .high .num {{ color: #e67e22; }}
-  .medium .num {{ color: #f39c12; }} .low .num {{ color: #27ae60; }}
+  .critical .num {{ color: #dc3545; }} .high .num {{ color: #fd7e14; }}
+  .medium .num {{ color: #ffc107; }} .low .num {{ color: #28a745; }}
   .total .num {{ color: #3498db; }}
   .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}
   table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
