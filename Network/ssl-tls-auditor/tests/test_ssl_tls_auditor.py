@@ -359,3 +359,39 @@ def test_check_weak_cipher_chacha20_passes():
         make_conn(cipher=("TLS_CHACHA20_POLY1305_SHA256", "TLSv1.3", 256))
     )
     assert finding["status"] == "PASS"
+
+
+# ── TLS-07: HSTS header ───────────────────────────────────────────────────────
+
+def test_check_hsts_absent_fails():
+    """No HSTS header → TLS-07 FAIL MEDIUM."""
+    conn = make_conn(headers={})
+    finding = sta.check_hsts(conn)
+    assert finding["check_id"] == "TLS-07"
+    assert finding["status"] == "FAIL"
+    assert finding["risk_level"] == "MEDIUM"
+    assert finding["severity_score"] > 0
+
+
+def test_check_hsts_max_age_zero_warns():
+    """HSTS header with max-age=0 → TLS-07 WARN LOW."""
+    conn = make_conn(headers={"strict-transport-security": "max-age=0"})
+    finding = sta.check_hsts(conn)
+    assert finding["status"] == "WARN"
+
+
+def test_check_hsts_max_age_one_year_passes():
+    """HSTS with max-age=31536000 (1 year) → TLS-07 PASS."""
+    conn = make_conn(headers={"strict-transport-security": "max-age=31536000"})
+    finding = sta.check_hsts(conn)
+    assert finding["status"] == "PASS"
+    assert finding["severity_score"] == 0
+
+
+def test_check_hsts_max_age_two_years_passes():
+    """HSTS with max-age=63072000 (2 years) → TLS-07 PASS."""
+    conn = make_conn(headers={
+        "strict-transport-security": "max-age=63072000; includeSubDomains; preload"
+    })
+    finding = sta.check_hsts(conn)
+    assert finding["status"] == "PASS"

@@ -407,3 +407,43 @@ def check_weak_cipher(conn: dict) -> dict:
         "TLS-06", "Cipher Suite Strength", "PASS", "HIGH", 0,
         f"Negotiated cipher suite {cipher_name!r} contains no known weak patterns", "",
     )
+
+# ── TLS-07: HSTS header ───────────────────────────────────────────────────────
+
+def check_hsts(conn: dict) -> dict:
+    """TLS-07: Check for Strict-Transport-Security header with adequate max-age."""
+    headers = conn.get("headers", {})
+    hsts = headers.get("strict-transport-security", "")
+
+    if not hsts:
+        return _finding(
+            "TLS-07", "HSTS Header", "FAIL", "MEDIUM", 3,
+            "Strict-Transport-Security header is absent. "
+            "Browsers may allow HTTP downgrade attacks (SSL stripping).",
+            "Add the header to your web server: "
+            "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload",
+        )
+
+    # Parse max-age value
+    max_age = 0
+    for part in hsts.split(";"):
+        part = part.strip()
+        if part.lower().startswith("max-age="):
+            try:
+                max_age = int(part.split("=", 1)[1].strip())
+            except ValueError:
+                pass
+
+    if max_age >= 31536000:  # 1 year in seconds
+        return _finding(
+            "TLS-07", "HSTS Header", "PASS", "MEDIUM", 0,
+            f"HSTS header present with max-age={max_age}s (>= 1 year). "
+            f"Full value: {hsts}", "",
+        )
+    return _finding(
+        "TLS-07", "HSTS Header", "WARN", "LOW", 0,
+        f"HSTS header present but max-age={max_age}s is below the recommended 1 year (31536000s). "
+        f"Full value: {hsts}",
+        "Increase max-age to at least 31536000 (1 year). "
+        "Consider adding includeSubDomains and preload directives.",
+    )
