@@ -105,7 +105,7 @@ SecurityAuditScripts/
 │   └── defender-auditor/           # Defender for Cloud plans, secure score, contacts
 ├── Email/
 │   ├── README.md
-│   └── email-security-auditor/       # SPF, DKIM, DMARC DNS checks
+│   └── email-security-auditor/  # SPF, DKIM, DMARC DNS checks
 └── OnPrem/
     ├── README.md
     ├── Windows/
@@ -183,10 +183,6 @@ SecurityAuditScripts/
 |--------|-------------|--------|
 | [Email Security Auditor](./Email/email-security-auditor/) | Audits a domain's email security DNS configuration — SPF, DKIM, and DMARC. No cloud credentials required; DNS queries only. | JSON, CSV, HTML |
 
-**Prerequisites:** `pip install dnspython`
-**No credentials needed** — DNS queries only
-**Usage:** `python3 audit.py --client "Acme Corp" --email --domain acme.ie`
-
 ---
 
 ## ⚙️ General Requirements
@@ -223,6 +219,12 @@ Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.
 
 Connect-AzAccount
 ```
+
+### Email
+
+- Python 3.7+
+- `dnspython` (`pip install dnspython`)
+- No credentials required — DNS queries only
 
 ### On-Premises
 
