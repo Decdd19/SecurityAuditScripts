@@ -122,3 +122,50 @@ def test_check_connectivity_success_returns_pass():
     assert finding["check_id"] == "TLS-00"
     assert finding["status"] == "PASS"
     assert finding["severity_score"] == 0
+
+
+# ── TLS-01: Certificate expiry ────────────────────────────────────────────────
+
+def test_check_cert_expiry_expired_returns_fail_critical():
+    """Expired cert (notAfter in past) → TLS-01 FAIL CRITICAL."""
+    conn = make_conn(peercert={
+        **make_conn()["peercert"],
+        "notAfter": _future(-1),
+    })
+    finding = sta.check_cert_expiry(conn)
+    assert finding["check_id"] == "TLS-01"
+    assert finding["status"] == "FAIL"
+    assert finding["risk_level"] == "CRITICAL"
+    assert finding["severity_score"] > 0
+
+
+def test_check_cert_expiry_7_days_returns_fail_critical():
+    """7 days remaining → TLS-01 FAIL CRITICAL (< 14-day threshold)."""
+    conn = make_conn(peercert={**make_conn()["peercert"], "notAfter": _future(7)})
+    finding = sta.check_cert_expiry(conn)
+    assert finding["status"] == "FAIL"
+    assert finding["risk_level"] == "CRITICAL"
+
+
+def test_check_cert_expiry_15_days_returns_warn_high():
+    """15 days remaining → TLS-01 WARN HIGH (14–30 day threshold)."""
+    conn = make_conn(peercert={**make_conn()["peercert"], "notAfter": _future(15)})
+    finding = sta.check_cert_expiry(conn)
+    assert finding["status"] == "WARN"
+    assert finding["risk_level"] == "HIGH"
+
+
+def test_check_cert_expiry_60_days_returns_pass():
+    """60 days remaining → TLS-01 PASS."""
+    conn = make_conn(peercert={**make_conn()["peercert"], "notAfter": _future(60)})
+    finding = sta.check_cert_expiry(conn)
+    assert finding["status"] == "PASS"
+    assert finding["severity_score"] == 0
+
+
+def test_check_cert_expiry_empty_peercert_returns_fail():
+    """Empty peercert dict (cert decode failed) → TLS-01 FAIL CRITICAL."""
+    conn = make_conn(peercert={})
+    finding = sta.check_cert_expiry(conn)
+    assert finding["status"] == "FAIL"
+    assert finding["risk_level"] == "CRITICAL"

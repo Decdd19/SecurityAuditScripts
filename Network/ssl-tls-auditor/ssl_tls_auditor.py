@@ -203,3 +203,57 @@ def check_connectivity(conn: Optional[dict], domain: str, port: int) -> dict:
         "TLS-00", "TLS Connectivity", "PASS", "CRITICAL", 0,
         f"TLS connection established to {domain}:{port}", "",
     )
+
+
+# ── TLS-01: Certificate expiry ────────────────────────────────────────────────
+
+def check_cert_expiry(conn: dict) -> dict:
+    """TLS-01: Check certificate expiry. FAIL if expired or <14d; WARN if <30d."""
+    pc = conn.get("peercert", {})
+    not_after_str = pc.get("notAfter", "")
+
+    if not pc or not not_after_str:
+        return _finding(
+            "TLS-01", "Certificate Expiry", "FAIL", "CRITICAL", 8,
+            "Certificate could not be decoded — expiry date unavailable.",
+            "Ensure the server presents a valid, CA-signed certificate.",
+        )
+
+    not_after = _parse_cert_time(not_after_str)
+    if not_after is None:
+        return _finding(
+            "TLS-01", "Certificate Expiry", "FAIL", "CRITICAL", 8,
+            f"Could not parse certificate notAfter date: {not_after_str!r}",
+            "Verify your certificate is correctly formatted.",
+        )
+
+    days_left = (not_after - NOW).days
+
+    if days_left < 0:
+        return _finding(
+            "TLS-01", "Certificate Expiry", "FAIL", "CRITICAL", 8,
+            f"Certificate expired {abs(days_left)} day(s) ago ({not_after_str}). "
+            "All browsers will reject this connection with a security error.",
+            "Renew the certificate immediately. Let's Encrypt certificates "
+            "can be renewed for free at letsencrypt.org.",
+        )
+    if days_left < 14:
+        return _finding(
+            "TLS-01", "Certificate Expiry", "FAIL", "CRITICAL", 6,
+            f"Certificate expires in {days_left} day(s) ({not_after_str}). "
+            "Imminent expiry — browsers will soon reject this connection.",
+            "Renew the certificate today. Contact your certificate provider "
+            "or use Let's Encrypt for automated renewal.",
+        )
+    if days_left < 30:
+        return _finding(
+            "TLS-01", "Certificate Expiry", "WARN", "HIGH", 0,
+            f"Certificate expires in {days_left} day(s) ({not_after_str}). "
+            "Schedule renewal before it expires.",
+            "Renew the certificate within the next week to avoid downtime. "
+            "Consider enabling automated renewal (Let's Encrypt + certbot).",
+        )
+    return _finding(
+        "TLS-01", "Certificate Expiry", "PASS", "HIGH", 0,
+        f"Certificate valid for {days_left} more day(s) (expires {not_after_str})", "",
+    )
