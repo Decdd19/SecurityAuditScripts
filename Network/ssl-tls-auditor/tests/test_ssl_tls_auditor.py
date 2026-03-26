@@ -395,3 +395,74 @@ def test_check_hsts_max_age_two_years_passes():
     })
     finding = sta.check_hsts(conn)
     assert finding["status"] == "PASS"
+
+
+# ── Integration / run() tests ─────────────────────────────────────────────────
+
+def test_run_audit_returns_findings_list():
+    """run_audit returns a non-empty list of findings dicts."""
+    with patch.object(sta, 'ssl_connect', return_value=make_conn()):
+        findings = sta.run_audit("acme.ie", 443)
+    assert isinstance(findings, list)
+    assert len(findings) >= 8  # TLS-00 through TLS-07
+    assert all("check_id" in f for f in findings)
+
+
+def test_run_audit_connection_fail_returns_single_finding():
+    """run_audit with None connection returns only TLS-00 finding."""
+    with patch.object(sta, 'ssl_connect', return_value=None):
+        findings = sta.run_audit("unreachable.ie", 443)
+    assert len(findings) == 1
+    assert findings[0]["check_id"] == "TLS-00"
+    assert findings[0]["status"] == "FAIL"
+
+
+def test_run_all_checks_pass_overall_risk_low():
+    """All checks pass with ideal fixture → overall_risk LOW."""
+    with patch.object(sta, 'ssl_connect', return_value=make_conn()):
+        report = sta.run("acme.ie", 443, "/tmp/test_tls_pass", "json")
+    assert report["summary"]["overall_risk"] in ("LOW", "MEDIUM")
+
+
+def test_run_produces_json_file(tmp_path):
+    """run() with format=json creates a .json file."""
+    prefix = str(tmp_path / "ssl_report")
+    with patch.object(sta, 'ssl_connect', return_value=make_conn()):
+        sta.run("acme.ie", 443, prefix, "json")
+    assert (tmp_path / "ssl_report.json").exists()
+    data = __import__('json').loads((tmp_path / "ssl_report.json").read_text())
+    assert "findings" in data
+    assert data["pillar"] == "tls"
+
+
+def test_run_produces_html_file(tmp_path):
+    """run() with format=html creates a .html file."""
+    prefix = str(tmp_path / "ssl_report")
+    with patch.object(sta, 'ssl_connect', return_value=make_conn()):
+        sta.run("acme.ie", 443, prefix, "html")
+    assert (tmp_path / "ssl_report.html").exists()
+
+
+def test_run_produces_csv_file(tmp_path):
+    """run() with format=csv creates a .csv file."""
+    prefix = str(tmp_path / "ssl_report")
+    with patch.object(sta, 'ssl_connect', return_value=make_conn()):
+        sta.run("acme.ie", 443, prefix, "csv")
+    assert (tmp_path / "ssl_report.csv").exists()
+
+
+def test_run_format_all_produces_three_files(tmp_path):
+    """run() with format=all creates .json, .html, and .csv files."""
+    prefix = str(tmp_path / "ssl_report")
+    with patch.object(sta, 'ssl_connect', return_value=make_conn()):
+        sta.run("acme.ie", 443, prefix, "all")
+    assert (tmp_path / "ssl_report.json").exists()
+    assert (tmp_path / "ssl_report.html").exists()
+    assert (tmp_path / "ssl_report.csv").exists()
+
+
+def test_all_findings_have_pillar_tls():
+    """Every finding has pillar='tls'."""
+    with patch.object(sta, 'ssl_connect', return_value=make_conn()):
+        findings = sta.run_audit("acme.ie", 443)
+    assert all(f.get("pillar") == "tls" for f in findings)
