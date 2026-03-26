@@ -358,3 +358,26 @@ def check_key_algorithm(conn: dict) -> dict:
         "Replace with a certificate using RSA (2048-bit minimum) or EC (P-256 or P-384). "
         "Most modern CAs issue RSA or EC certificates by default.",
     )
+
+# ── TLS-05: TLS version ───────────────────────────────────────────────────────
+
+def check_tls_version(conn: dict) -> dict:
+    """
+    TLS-05: Verify the negotiated TLS version is 1.2 or higher.
+    Note: this checks the negotiated version, not whether the server
+    supports older versions. Use dedicated tools (testssl.sh) for full
+    protocol range enumeration.
+    """
+    version = conn.get("version", "")
+    if version in ("TLSv1.2", "TLSv1.3"):
+        return _finding(
+            "TLS-05", "TLS Version", "PASS", "HIGH", 0,
+            f"Negotiated TLS version: {version}", "",
+        )
+    return _finding(
+        "TLS-05", "TLS Version", "FAIL", "HIGH", 5,
+        f"Weak TLS version negotiated: {version or 'unknown'} — below TLS 1.2 minimum. "
+        "TLS 1.0 and 1.1 have known vulnerabilities (BEAST, POODLE).",
+        "Configure your web server to support TLS 1.2 and TLS 1.3 only. "
+        "Disable TLS 1.0 and TLS 1.1 in server configuration (nginx: ssl_protocols TLSv1.2 TLSv1.3).",
+    )

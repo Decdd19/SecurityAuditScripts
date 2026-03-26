@@ -298,3 +298,32 @@ def test_check_key_algorithm_empty_der_fails():
     conn = make_conn(peercert_der=b"")
     finding = sta.check_key_algorithm(conn)
     assert finding["status"] == "FAIL"
+
+# ── TLS-05: TLS version ───────────────────────────────────────────────────────
+
+def test_check_tls_version_tls13_passes():
+    """TLSv1.3 negotiated → TLS-05 PASS."""
+    finding = sta.check_tls_version(make_conn(version="TLSv1.3"))
+    assert finding["check_id"] == "TLS-05"
+    assert finding["status"] == "PASS"
+
+
+def test_check_tls_version_tls12_passes():
+    """TLSv1.2 negotiated → TLS-05 PASS."""
+    finding = sta.check_tls_version(make_conn(version="TLSv1.2"))
+    assert finding["status"] == "PASS"
+
+
+def test_check_tls_version_tls10_fails():
+    """TLSv1.0 negotiated → TLS-05 FAIL HIGH."""
+    finding = sta.check_tls_version(make_conn(version="TLSv1"))
+    assert finding["status"] == "FAIL"
+    assert finding["risk_level"] == "HIGH"
+    assert finding["severity_score"] > 0
+
+
+def test_check_tls_version_tls11_fails():
+    """TLSv1.1 negotiated → TLS-05 FAIL HIGH."""
+    finding = sta.check_tls_version(make_conn(version="TLSv1.1"))
+    assert finding["status"] == "FAIL"
+    assert finding["risk_level"] == "HIGH"
