@@ -666,7 +666,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     today = date.today().strftime("%Y-%m-%d")
     client_slug = args.client.replace(" ", "-")
-    client_dir = Path(args.output) / f"{client_slug}-{today}"
+    client_dir = Path(args.output).resolve() / f"{client_slug}-{today}"
     client_dir.mkdir(parents=True, exist_ok=True)
 
     console.print(f"\n[bold]Client:[/bold] {args.client}")
