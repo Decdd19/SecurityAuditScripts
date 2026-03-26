@@ -124,3 +124,27 @@ def check_x_frame_options(conn: dict) -> dict:
         f"X-Frame-Options value '{val}' is not recognised. Expected DENY or SAMEORIGIN.",
         "Set X-Frame-Options to DENY or SAMEORIGIN.",
     )
+
+
+# ── HDR-02: X-Content-Type-Options ───────────────────────────────────────────
+
+def check_x_content_type_options(conn: dict) -> dict:
+    """HDR-02: X-Content-Type-Options must be 'nosniff'."""
+    val = conn.get("headers", {}).get("x-content-type-options", "").strip().lower()
+    if val == "nosniff":
+        return _finding(
+            "HDR-02", "X-Content-Type-Options", "PASS", "MEDIUM", 0,
+            "X-Content-Type-Options: nosniff", "",
+        )
+    if not val:
+        return _finding(
+            "HDR-02", "X-Content-Type-Options", "FAIL", "MEDIUM", 5,
+            "X-Content-Type-Options header is absent. Browsers may MIME-sniff responses, "
+            "enabling content injection attacks.",
+            "Add 'X-Content-Type-Options: nosniff' to all responses.",
+        )
+    return _finding(
+        "HDR-02", "X-Content-Type-Options", "FAIL", "MEDIUM", 5,
+        f"X-Content-Type-Options value '{val}' is not 'nosniff'.",
+        "Set X-Content-Type-Options to exactly 'nosniff'.",
+    )

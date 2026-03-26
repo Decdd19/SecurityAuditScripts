@@ -142,3 +142,24 @@ def test_check_x_frame_options_fail_absent():
     assert f["status"] == "FAIL"
     assert f["risk_level"] == "HIGH"
     assert f["severity_score"] == 7
+
+
+# ── HDR-02: X-Content-Type-Options ───────────────────────────────────────────
+
+def test_check_x_content_type_options_pass():
+    f = hha.check_x_content_type_options(make_conn(**{"x-content-type-options": "nosniff"}))
+    assert f["check_id"] == "HDR-02"
+    assert f["status"] == "PASS"
+
+
+def test_check_x_content_type_options_fail_absent():
+    f = hha.check_x_content_type_options(make_conn(**{"x-content-type-options": None}))
+    assert f["status"] == "FAIL"
+    assert f["risk_level"] == "MEDIUM"
+    assert f["severity_score"] == 5
+
+
+def test_check_x_content_type_options_fail_wrong_value():
+    f = hha.check_x_content_type_options(make_conn(**{"x-content-type-options": "sniff"}))
+    assert f["status"] == "FAIL"
+    assert f["severity_score"] == 5
