@@ -102,3 +102,23 @@ def test_ssl_connect_returns_dict_on_success():
     assert "version" in result
     assert "cipher" in result
     assert "headers" in result
+
+
+# ── TLS-00: Connectivity ──────────────────────────────────────────────────────
+
+def test_check_connectivity_none_returns_fail():
+    """ssl_connect returned None → TLS-00 FAIL CRITICAL."""
+    finding = sta.check_connectivity(None, "acme.ie", 443)
+    assert finding["check_id"] == "TLS-00"
+    assert finding["status"] == "FAIL"
+    assert finding["risk_level"] == "CRITICAL"
+    assert finding["severity_score"] > 0
+    assert "acme.ie" in finding["detail"]
+
+
+def test_check_connectivity_success_returns_pass():
+    """Successful connection dict → TLS-00 PASS."""
+    finding = sta.check_connectivity(make_conn(), "acme.ie", 443)
+    assert finding["check_id"] == "TLS-00"
+    assert finding["status"] == "PASS"
+    assert finding["severity_score"] == 0

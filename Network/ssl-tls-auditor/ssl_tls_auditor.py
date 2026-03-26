@@ -185,3 +185,21 @@ def _key_algorithm(der: bytes) -> str:
     if _DSA_OID in der:
         return "DSA"
     return "UNKNOWN"
+
+
+# ── TLS-00: Connectivity ──────────────────────────────────────────────────────
+
+def check_connectivity(conn: Optional[dict], domain: str, port: int) -> dict:
+    """TLS-00: Verify we can establish a TLS connection to domain:port."""
+    if conn is None:
+        return _finding(
+            "TLS-00", "TLS Connectivity", "FAIL", "CRITICAL", 10,
+            f"Could not establish TLS connection to {domain}:{port}. "
+            "Host may be unreachable, port closed, or TLS not enabled.",
+            "Verify the server is running, port is open (check firewall rules), "
+            "and TLS/SSL is enabled in your web server configuration.",
+        )
+    return _finding(
+        "TLS-00", "TLS Connectivity", "PASS", "CRITICAL", 0,
+        f"TLS connection established to {domain}:{port}", "",
+    )
