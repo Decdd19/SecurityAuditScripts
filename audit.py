@@ -86,6 +86,13 @@ AUDITOR_MAP: Dict[str, AuditorDef] = {
         supports_regions=False,
         requires_domain=True,
     ),
+    # ── Network ───────────────────────────────────────────────────────────────
+    "ssl": AuditorDef(
+        REPO_ROOT / "Network/ssl-tls-auditor/ssl_tls_auditor.py",
+        "ssl_report",
+        supports_regions=False,
+        requires_domain=True,
+    ),
 }
 
 AWS_GROUP: List[str] = [
@@ -175,6 +182,17 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
   Example:
     python3 audit.py --client "Acme Corp" --email --domain acme.ie
 
+━━━ SSL/TLS AUDITOR (--ssl requires --domain) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  --ssl          SSL/TLS certificate expiry, hostname match, TLS version,
+                 cipher suite strength, and HSTS header
+                 Requires: --domain acme.ie
+                 No cloud credentials needed — TCP port 443 only
+
+  Example:
+    python3 audit.py --client "Acme Corp" --ssl --domain acme.ie
+    python3 audit.py --client "Acme Corp" --email --ssl --domain acme.ie
+
 ━━━ AZURE / WINDOWS (--azure or --windows) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   These are PowerShell scripts that must run on a Windows machine with the
@@ -220,6 +238,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     groups.add_argument("--windows", action="store_true", help="Print Windows PS1 instructions")
     groups.add_argument("--all",     action="store_true", help="Run all Python auditors + print PS1 instructions")
     groups.add_argument("--email",   action="store_true", help="Run email security auditor (requires --domain)")
+    groups.add_argument("--ssl",     action="store_true", help="Run SSL/TLS certificate auditor (requires --domain)")
 
     # Individual AWS auditor flags
     _aws_help = {
@@ -610,6 +629,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Validate --email requires --domain
     if "email" in selected and not args.domain:
         console.print("[bold red]error:[/bold red] --email requires --domain (e.g. --domain acme.ie)")
+        return 1
+
+    # Validate --ssl requires --domain
+    if "ssl" in selected and not args.domain:
+        console.print("[bold red]error:[/bold red] --ssl requires --domain (e.g. --domain acme.ie)")
         return 1
 
     if not selected and not show_ps1:
