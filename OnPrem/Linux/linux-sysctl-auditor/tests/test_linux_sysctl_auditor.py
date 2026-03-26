@@ -367,7 +367,7 @@ def test_write_html_contains_green_gradient(tmp_path):
         lsa.write_html(report, path)
     with open(path) as f:
         content = f.read()
-    assert '#27ae60' in content
+    assert '#28a745' in content
 
 
 # ── run() end-to-end ───────────────────────────────────────────────────────────
