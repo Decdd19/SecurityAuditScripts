@@ -148,3 +148,33 @@ def check_x_content_type_options(conn: dict) -> dict:
         f"X-Content-Type-Options value '{val}' is not 'nosniff'.",
         "Set X-Content-Type-Options to exactly 'nosniff'.",
     )
+
+
+# ── HDR-03: Content-Security-Policy ──────────────────────────────────────────
+
+_WEAK_CSP = frozenset({"'unsafe-inline'", "'unsafe-eval'"})
+
+
+def check_content_security_policy(conn: dict) -> dict:
+    """HDR-03: CSP must be present and not contain unsafe directives."""
+    val = conn.get("headers", {}).get("content-security-policy", "").strip()
+    if not val:
+        return _finding(
+            "HDR-03", "Content-Security-Policy", "FAIL", "HIGH", 8,
+            "Content-Security-Policy header is absent. No XSS mitigation policy is enforced.",
+            "Define a Content-Security-Policy that restricts script sources. "
+            "Start with: Content-Security-Policy: default-src 'self'",
+        )
+    weak = [kw for kw in _WEAK_CSP if kw in val]
+    if weak:
+        return _finding(
+            "HDR-03", "Content-Security-Policy", "WARN", "HIGH", 0,
+            f"Content-Security-Policy present but contains {', '.join(sorted(weak))}, "
+            "which weakens XSS protection.",
+            "Remove 'unsafe-inline' and 'unsafe-eval'. "
+            "Use nonces or hashes for inline scripts instead.",
+        )
+    return _finding(
+        "HDR-03", "Content-Security-Policy", "PASS", "HIGH", 0,
+        f"Content-Security-Policy present without unsafe directives: {val[:120]}", "",
+    )

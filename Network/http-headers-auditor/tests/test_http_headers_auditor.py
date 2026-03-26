@@ -163,3 +163,37 @@ def test_check_x_content_type_options_fail_wrong_value():
     f = hha.check_x_content_type_options(make_conn(**{"x-content-type-options": "sniff"}))
     assert f["status"] == "FAIL"
     assert f["severity_score"] == 5
+
+
+# ── HDR-03: Content-Security-Policy ──────────────────────────────────────────
+
+def test_check_csp_pass_clean_policy():
+    f = hha.check_content_security_policy(
+        make_conn(**{"content-security-policy": "default-src 'self'; script-src 'self'"})
+    )
+    assert f["check_id"] == "HDR-03"
+    assert f["status"] == "PASS"
+
+
+def test_check_csp_warn_unsafe_inline():
+    f = hha.check_content_security_policy(
+        make_conn(**{"content-security-policy": "default-src 'self'; script-src 'unsafe-inline'"})
+    )
+    assert f["status"] == "WARN"
+    assert f["severity_score"] == 0
+    assert "unsafe-inline" in f["detail"]
+
+
+def test_check_csp_warn_unsafe_eval():
+    f = hha.check_content_security_policy(
+        make_conn(**{"content-security-policy": "default-src 'self'; script-src 'unsafe-eval'"})
+    )
+    assert f["status"] == "WARN"
+    assert "unsafe-eval" in f["detail"]
+
+
+def test_check_csp_fail_absent():
+    f = hha.check_content_security_policy(make_conn(**{"content-security-policy": None}))
+    assert f["status"] == "FAIL"
+    assert f["risk_level"] == "HIGH"
+    assert f["severity_score"] == 8
