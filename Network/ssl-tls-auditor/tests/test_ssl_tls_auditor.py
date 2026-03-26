@@ -259,3 +259,42 @@ def test_check_self_signed_empty_peercert_warns():
     finding = sta.check_self_signed(conn)
     assert finding["check_id"] == "TLS-03"
     assert finding["status"] == "WARN"
+
+# ── TLS-04: Key algorithm ─────────────────────────────────────────────────────
+
+def test_check_key_algorithm_rsa_passes():
+    """RSA OID in DER → TLS-04 PASS."""
+    conn = make_conn(peercert_der=_RSA_DER)
+    finding = sta.check_key_algorithm(conn)
+    assert finding["check_id"] == "TLS-04"
+    assert finding["status"] == "PASS"
+
+
+def test_check_key_algorithm_ec_passes():
+    """EC OID in DER → TLS-04 PASS."""
+    conn = make_conn(peercert_der=_EC_DER)
+    finding = sta.check_key_algorithm(conn)
+    assert finding["status"] == "PASS"
+
+
+def test_check_key_algorithm_dsa_fails():
+    """DSA OID in DER → TLS-04 FAIL HIGH."""
+    conn = make_conn(peercert_der=_DSA_DER)
+    finding = sta.check_key_algorithm(conn)
+    assert finding["status"] == "FAIL"
+    assert finding["risk_level"] == "HIGH"
+    assert finding["severity_score"] > 0
+
+
+def test_check_key_algorithm_unknown_fails():
+    """Unknown OID → TLS-04 FAIL HIGH."""
+    conn = make_conn(peercert_der=_UNK_DER)
+    finding = sta.check_key_algorithm(conn)
+    assert finding["status"] == "FAIL"
+
+
+def test_check_key_algorithm_empty_der_fails():
+    """Empty DER bytes → TLS-04 FAIL."""
+    conn = make_conn(peercert_der=b"")
+    finding = sta.check_key_algorithm(conn)
+    assert finding["status"] == "FAIL"

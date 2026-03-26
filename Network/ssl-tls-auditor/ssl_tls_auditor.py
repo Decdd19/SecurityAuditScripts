@@ -334,3 +334,27 @@ def check_self_signed(conn: dict) -> dict:
         "TLS-03", "No Self-Signed Certificate", "PASS", "HIGH", 0,
         "Certificate is signed by a CA (issuer differs from subject)", "",
     )
+
+# ── TLS-04: Key algorithm ─────────────────────────────────────────────────────
+
+def check_key_algorithm(conn: dict) -> dict:
+    """
+    TLS-04: Check certificate public key algorithm.
+    FAIL if DSA (deprecated) or unknown. PASS for RSA or EC.
+    Note: key size in bits is not checked (Python stdlib limitation).
+    """
+    der = conn.get("peercert_der", b"")
+    alg = _key_algorithm(der) if der else "UNKNOWN"
+
+    if alg in ("RSA", "EC"):
+        return _finding(
+            "TLS-04", "Key Algorithm", "PASS", "HIGH", 0,
+            f"Certificate uses {alg} public key algorithm (acceptable)", "",
+        )
+    return _finding(
+        "TLS-04", "Key Algorithm", "FAIL", "HIGH", 4,
+        f"Certificate uses {alg} key algorithm — not recommended for new deployments. "
+        "DSA is deprecated; unknown algorithms may indicate a misconfigured server.",
+        "Replace with a certificate using RSA (2048-bit minimum) or EC (P-256 or P-384). "
+        "Most modern CAs issue RSA or EC certificates by default.",
+    )
