@@ -165,20 +165,29 @@ def compute_pillar_stats(pillar_name, report):
 def compute_overall_score(pillar_stats_list):
     """
     Compute 0-100 security score and letter grade.
-    Deductions: CRITICAL=-8, HIGH=-4, MEDIUM=-2, LOW=-0.5
 
-    Calibrated for SMB environments: a client needs 13 CRITICALs to reach
-    score 0, giving meaningful differentiation between first-time assessments.
+    Deductions are per-pillar (not per-finding) to avoid inflating the penalty
+    for regional auditors that emit one finding per AWS region:
+      CRITICAL pillar: -8 pts
+      HIGH pillar:     -3 pts
+      MEDIUM pillar:   -1 pt
+      LOW pillar:       0 pts  (minor issues; not penalised)
+
+    With 20 pillars the worst-case deduction is 160 pts (score floors at 0).
+    A typical first-time SMB assessment with 5-8 CRITICAL pillars scores 36-60.
     """
     if not pillar_stats_list:
         return 100, "A"
 
     deductions = 0
     for stats in pillar_stats_list:
-        deductions += stats.get("critical", 0) * 8
-        deductions += stats.get("high", 0) * 4
-        deductions += stats.get("medium", 0) * 2
-        deductions += stats.get("low", 0) * 0.5
+        if stats.get("critical", 0) > 0:
+            deductions += 8
+        elif stats.get("high", 0) > 0:
+            deductions += 3
+        elif stats.get("medium", 0) > 0:
+            deductions += 1
+        # LOW: 0 deduction
 
     score = max(0, min(100, 100 - deductions))
 
