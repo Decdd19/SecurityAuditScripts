@@ -93,6 +93,12 @@ AUDITOR_MAP: Dict[str, AuditorDef] = {
         supports_regions=False,
         requires_domain=True,
     ),
+    "http_headers": AuditorDef(
+        REPO_ROOT / "Network/http-headers-auditor/http_headers_auditor.py",
+        "http_headers_report",
+        supports_regions=False,
+        requires_domain=True,
+    ),
 }
 
 AWS_GROUP: List[str] = [
@@ -193,6 +199,17 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     python3 audit.py --client "Acme Corp" --ssl --domain acme.ie
     python3 audit.py --client "Acme Corp" --email --ssl --domain acme.ie
 
+━━━ HTTP HEADERS AUDITOR (--http-headers requires --domain) ━━━━━━━━━━━━━━━━━━
+
+  --http-headers  X-Frame-Options, X-Content-Type-Options, Content-Security-Policy,
+                  Referrer-Policy, Permissions-Policy
+                  Requires: --domain acme.ie
+                  No cloud credentials needed — HTTPS port 443 only
+
+  Example:
+    python3 audit.py --client "Acme Corp" --http-headers --domain acme.ie
+    python3 audit.py --client "Acme Corp" --ssl --http-headers --domain acme.ie
+
 ━━━ AZURE / WINDOWS (--azure or --windows) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   These are PowerShell scripts that must run on a Windows machine with the
@@ -239,6 +256,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     groups.add_argument("--all",     action="store_true", help="Run all Python auditors + print PS1 instructions")
     groups.add_argument("--email",   action="store_true", help="Run email security auditor (requires --domain)")
     groups.add_argument("--ssl",     action="store_true", help="Run SSL/TLS certificate auditor (requires --domain)")
+    groups.add_argument("--http-headers", action="store_true", help="Run HTTP security headers auditor (requires --domain)")
 
     # Individual AWS auditor flags
     _aws_help = {
