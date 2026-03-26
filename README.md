@@ -43,7 +43,7 @@ graph TD
     O -.->|"--windows: prints PS1 instructions"| Azure
     O -.->|"--windows: prints PS1 instructions"| Windows
     O -->|"--email --domain"| Email
-    O -->|"--ssl --domain"| Network
+    O -->|"--ssl / --http-headers --domain"| Network
 
     AWS --> S["📊 exec_summary.py\nCross-cloud HTML report · Security score 0–100"]
     Linux --> S
@@ -78,7 +78,7 @@ python3 audit.py --client "Acme Corp" --windows
 python3 audit.py --client "Acme Corp" --all --open
 ```
 
-**Flags:** `--aws` (all 13 AWS) · `--linux` (all 4 Linux) · `--windows` (Azure/Windows PS1 guide) · `--all` (everything) · `--profile` · `--regions` · `--output` · `--format` · `--workers` · `--open`
+**Flags:** `--aws` (all 13 AWS) · `--linux` (all 4 Linux) · `--windows` (Azure/Windows PS1 guide) · `--all` (everything) · `--ssl --domain` · `--http-headers --domain` · `--email --domain` · `--profile` · `--regions` · `--output` · `--format` · `--workers` · `--open`
 
 > **Prerequisites:** `pip install boto3 rich` · AWS credentials configured · Run with `sudo` for Linux auditors
 

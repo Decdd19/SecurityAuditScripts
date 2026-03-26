@@ -654,6 +654,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         console.print("[bold red]error:[/bold red] --ssl requires --domain (e.g. --domain acme.ie)")
         return 1
 
+    if "http_headers" in selected and not args.domain:
+        console.print("[bold red]error:[/bold red] --http-headers requires --domain (e.g. --domain acme.ie)")
+        return 1
+
     if not selected and not show_ps1:
         console.print(
             "[red]No auditors selected.[/red] "
