@@ -644,19 +644,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     print_banner()
     selected, show_ps1 = select_auditors(args)
 
-    # Validate --email requires --domain
-    if "email" in selected and not args.domain:
-        console.print("[bold red]error:[/bold red] --email requires --domain (e.g. --domain acme.ie)")
-        return 1
-
-    # Validate --ssl requires --domain
-    if "ssl" in selected and not args.domain:
-        console.print("[bold red]error:[/bold red] --ssl requires --domain (e.g. --domain acme.ie)")
-        return 1
-
-    if "http_headers" in selected and not args.domain:
-        console.print("[bold red]error:[/bold red] --http-headers requires --domain (e.g. --domain acme.ie)")
-        return 1
+    # Validate that any auditor with requires_domain=True has --domain supplied.
+    # Adding a new domain-requiring auditor? Set requires_domain=True in AUDITOR_MAP —
+    # no changes needed here.
+    for key in selected:
+        if AUDITOR_MAP.get(key) and AUDITOR_MAP[key].requires_domain and not args.domain:
+            flag = f"--{key.replace('_', '-')}"
+            console.print(f"[bold red]error:[/bold red] {flag} requires --domain (e.g. --domain acme.ie)")
+            return 1
 
     if not selected and not show_ps1:
         console.print(
