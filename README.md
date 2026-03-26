@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Decdd19/SecurityAuditScripts/actions/workflows/ci.yml/badge.svg)](https://github.com/Decdd19/SecurityAuditScripts/actions/workflows/ci.yml)
 
-A collection of security auditing scripts for AWS, Azure, and on-premises infrastructure. Built for security engineers and sysadmins who want real visibility into their environment without relying on commercial tooling.
+A collection of security auditing scripts for AWS, Azure, on-premises infrastructure, and network services. Built for security engineers and sysadmins who want real visibility into their environment without relying on commercial tooling.
 
 > **Purpose:** Practical, standalone scripts that give you real security insight. No agents, no SaaS dependencies — just run and review.
 
@@ -30,14 +30,26 @@ graph TD
         W["AD · Local Users · Firewall\nSMB Signing · Audit Policy · BitLocker"]
     end
 
+    subgraph Email["📧 Email  —  1 auditor  (Python · dnspython)"]
+        E["SPF · DKIM · DMARC"]
+    end
+
+    subgraph Network["🌐 Network  —  1 auditor  (Python · stdlib)"]
+        N["SSL/TLS Certificates"]
+    end
+
     O -->|"--aws flag"| AWS
     O -->|"--linux flag"| Linux
     O -.->|"--windows: prints PS1 instructions"| Azure
     O -.->|"--windows: prints PS1 instructions"| Windows
+    O -->|"--email --domain"| Email
+    O -->|"--ssl --domain"| Network
 
     AWS --> S["📊 exec_summary.py\nCross-cloud HTML report · Security score 0–100"]
     Linux --> S
     Azure -.->|"JSON reports"| S
+    Email --> S
+    Network --> S
 ```
 
 ---
@@ -106,6 +118,9 @@ SecurityAuditScripts/
 ├── Email/
 │   ├── README.md
 │   └── email-security-auditor/  # SPF, DKIM, DMARC DNS checks
+├── Network/
+│   ├── README.md
+│   └── ssl-tls-auditor/         # SSL/TLS cert expiry, hostname, TLS version, cipher, HSTS
 └── OnPrem/
     ├── README.md
     ├── Windows/
@@ -183,6 +198,12 @@ SecurityAuditScripts/
 |--------|-------------|--------|
 | [Email Security Auditor](./Email/email-security-auditor/) | Audits a domain's email security DNS configuration — SPF, DKIM, and DMARC. No cloud credentials required; DNS queries only. | JSON, CSV, HTML |
 
+### Network
+
+| Script | Description | Output |
+|--------|-------------|--------|
+| [SSL/TLS Auditor](./Network/ssl-tls-auditor/) | Audits a domain's SSL/TLS certificate and TLS configuration — cert expiry, hostname match, self-signed detection, key algorithm, TLS version (min 1.2), weak cipher suite, and HSTS header. No credentials required; TCP port 443 only. | JSON, CSV, HTML |
+
 ---
 
 ## ⚙️ General Requirements
@@ -225,6 +246,12 @@ Connect-AzAccount
 - Python 3.7+
 - `dnspython` (`pip install dnspython`)
 - No credentials required — DNS queries only
+
+### Network (SSL/TLS)
+
+- Python 3.8+
+- No external dependencies (stdlib only: `ssl`, `socket`, `datetime`)
+- No credentials required — outbound TCP port 443 only
 
 ### On-Premises
 
@@ -291,6 +318,19 @@ sudo python3 OnPrem/Linux/linux-user-auditor/linux_user_auditor.py --format html
 sudo python3 OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py --format all
 ```
 
+### Network / SSL-TLS
+```bash
+git clone https://github.com/Decdd19/SecurityAuditScripts.git
+cd SecurityAuditScripts
+
+# Standalone (no dependencies)
+python3 Network/ssl-tls-auditor/ssl_tls_auditor.py --domain acme.ie --format all
+
+# Via orchestrator
+python3 audit.py --client "Acme Corp" --ssl --domain acme.ie
+python3 audit.py --client "Acme Corp" --email --ssl --domain acme.ie
+```
+
 ---
 
 ## 📌 Notes
@@ -303,6 +343,7 @@ sudo python3 OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py --for
 - Azure scripts support `-Format` (json, csv, html, all, stdout) and `-AllSubscriptions` flags
 - OnPrem Windows scripts support `-Format` (json, csv, html, all, stdout)
 - OnPrem Linux scripts support `--format` (json, csv, html, all, stdout)
+- Network scripts support `--format` (json, csv, html, all, stdout) and `--port` flags; no credentials required
 
 ---
 
