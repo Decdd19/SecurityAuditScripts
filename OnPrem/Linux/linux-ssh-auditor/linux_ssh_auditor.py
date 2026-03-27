@@ -283,3 +283,150 @@ def analyse_ssh(config):
                 }
         findings.append(finding)
     return findings
+
+
+# ── Scoring ───────────────────────────────────────────────────────────────────
+
+def compute_risk(findings):
+    """Compute overall risk from findings. Returns (score, risk, c, h, m, l)."""
+    criticals = sum(1 for f in findings if f['compliant'] is False and f['severity_if_wrong'] == 'CRITICAL')
+    highs     = sum(1 for f in findings if f['compliant'] is False and f['severity_if_wrong'] == 'HIGH')
+    mediums   = sum(1 for f in findings if f['compliant'] is False and f['severity_if_wrong'] == 'MEDIUM')
+    lows      = sum(1 for f in findings if f['compliant'] is False and f['severity_if_wrong'] == 'LOW')
+
+    score = min(criticals * 8 + highs * 4 + mediums * 2 + int(lows * 0.5), 10)
+
+    if score >= 8 or criticals > 0:
+        risk = 'CRITICAL'
+    elif score >= 5:
+        risk = 'HIGH'
+    elif score >= 2:
+        risk = 'MEDIUM'
+    else:
+        risk = 'LOW'
+
+    return score, risk, criticals, highs, mediums, lows
+
+
+# ── Output formatters ─────────────────────────────────────────────────────────
+
+def write_json(report, path):
+    with open(path, 'w') as f:
+        json.dump(report, f, indent=2, default=str)
+    os.chmod(path, 0o600)
+    log.info(f"JSON report: {path}")
+
+
+def write_csv(findings, path):
+    if not findings:
+        return
+    fieldnames = [
+        'param', 'expected', 'actual', 'compliant', 'severity_if_wrong',
+        'description', 'flag', 'remediation',
+    ]
+    with open(path, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
+        writer.writeheader()
+        for finding in findings:
+            writer.writerow(finding)
+    os.chmod(path, 0o600)
+    log.info(f"CSV report: {path}")
+
+
+def write_html(report, path):
+    findings  = report['findings']
+    summary   = report['summary']
+    generated = report['generated_at']
+    hostname  = report.get('hostname', 'unknown')
+
+    severity_colors = {
+        'CRITICAL': '#dc3545',
+        'HIGH':     '#fd7e14',
+        'MEDIUM':   '#ffc107',
+        'LOW':      '#28a745',
+    }
+
+    def _row_color(f):
+        if f['compliant'] is None:
+            return '#95a5a6'
+        if f['compliant']:
+            return '#28a745'
+        return severity_colors.get(f['severity_if_wrong'], '#fd7e14')
+
+    rows = ''
+    for f in findings:
+        color = _row_color(f)
+        label = 'SKIP' if f['compliant'] is None else ('PASS' if f['compliant'] else 'FAIL')
+        icon  = 'i' if f['compliant'] is None else ('OK' if f['compliant'] else 'X')
+        remediation = f.get('remediation') or ''
+        rows += f"""
+        <tr>
+            <td><span style="background:{color};color:white;padding:2px 8px;border-radius:4px;font-weight:bold">{icon} {label}</span></td>
+            <td><span style="background:{severity_colors.get(f['severity_if_wrong'], '#999')};color:white;padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:bold">{f['severity_if_wrong']}</span></td>
+            <td style="font-family:monospace;font-size:0.85em">{f['param']}</td>
+            <td style="font-family:monospace">{f['expected']}</td>
+            <td style="font-family:monospace">{f['actual']}</td>
+            <td style="font-size:0.85em">{f['description']}</td>
+            <td style="font-size:0.8em;color:#28a745">{remediation}</td>
+        </tr>"""
+
+    risk_color = severity_colors.get(summary['overall_risk'], '#28a745')
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Linux SSH Hardening Audit Report</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
+  .header {{ background: linear-gradient(135deg, #2c3e50, #28a745); color: white; padding: 30px 40px; }}
+  .header h1 {{ margin: 0; font-size: 1.8em; }}
+  .header p {{ margin: 5px 0 0; opacity: 0.8; }}
+  .summary {{ display: flex; gap: 20px; padding: 20px 40px; flex-wrap: wrap; }}
+  .card {{ background: white; border-radius: 8px; padding: 20px 30px; flex: 1; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
+  .card .num {{ font-size: 2.5em; font-weight: bold; }}
+  .card .label {{ color: #666; font-size: 0.9em; margin-top: 4px; }}
+  .compliant .num {{ color: #28a745; }}
+  .noncompliant .num {{ color: #fd7e14; }}
+  .high .num {{ color: #fd7e14; }}
+  .medium .num {{ color: #ffc107; }}
+  .low .num {{ color: #28a745; }}
+  .total .num {{ color: #3498db; }}
+  .risk-badge {{ display: inline-block; background: {risk_color}; color: white; border-radius: 6px; padding: 4px 14px; font-weight: bold; font-size: 1.1em; }}
+  .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}
+  table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
+  th {{ background: #2c3e50; color: white; padding: 12px 15px; text-align: left; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }}
+  td {{ padding: 10px 15px; border-bottom: 1px solid #ecf0f1; vertical-align: top; }}
+  tr:last-child td {{ border-bottom: none; }}
+  tr:hover td {{ background: #f8f9ff; }}
+  .footer {{ text-align: center; padding: 20px; color: #999; font-size: 0.85em; }}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Linux SSH Hardening Audit Report</h1>
+  <p>Generated: {generated} | Host: {hostname} | {summary['total_checks']} checks | Risk: <span class="risk-badge">{summary['overall_risk']}</span></p>
+</div>
+<div class="summary">
+  <div class="card total"><div class="num">{summary['total_checks']}</div><div class="label">Total Checks</div></div>
+  <div class="card compliant"><div class="num">{summary['compliant']}</div><div class="label">Compliant</div></div>
+  <div class="card noncompliant"><div class="num">{summary['non_compliant']}</div><div class="label">Non-Compliant</div></div>
+  <div class="card high"><div class="num">{summary['high']}</div><div class="label">HIGH Violations</div></div>
+  <div class="card medium"><div class="num">{summary['medium']}</div><div class="label">MEDIUM Violations</div></div>
+</div>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Status</th><th>Severity</th><th>Parameter</th><th>Expected</th><th>Actual</th><th>Description</th><th>Remediation</th></tr>
+    </thead>
+    <tbody>{rows}</tbody>
+  </table>
+</div>
+<div class="footer">Linux SSH Hardening Auditor | For internal security use only</div>
+</body>
+</html>"""
+
+    with open(path, 'w') as f:
+        f.write(html)
+    os.chmod(path, 0o600)
+    log.info(f"HTML report: {path}")

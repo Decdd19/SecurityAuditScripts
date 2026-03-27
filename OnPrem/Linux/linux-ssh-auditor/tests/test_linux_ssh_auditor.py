@@ -1,6 +1,7 @@
 """Tests for linux_ssh_auditor.py"""
 import sys
 import os
+import json
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -289,3 +290,117 @@ def test_no_weak_suffix_wildcard():
     assert fn('rijndael-cbc')[0] is False
     assert fn('aes128-ctr')[0] is True
     assert fn('cbc')[0] is True  # no hyphen, should pass
+
+
+# ── compute_risk ───────────────────────────────────────────────────────────────
+
+def test_compute_risk_no_findings():
+    score, risk, c, h, m, l = lsa.compute_risk([])
+    assert score == 0
+    assert risk == 'LOW'
+
+
+def test_compute_risk_critical_raises_to_critical():
+    findings = [{'compliant': False, 'severity_if_wrong': 'CRITICAL'}]
+    score, risk, c, h, m, l = lsa.compute_risk(findings)
+    assert risk == 'CRITICAL'
+    assert c == 1
+
+
+def test_compute_risk_score_capped_at_10():
+    findings = [{'compliant': False, 'severity_if_wrong': 'HIGH'}] * 10
+    score, risk, c, h, m, l = lsa.compute_risk(findings)
+    assert score == 10
+
+
+def test_compute_risk_skips_none_compliant():
+    findings = [{'compliant': None, 'severity_if_wrong': 'CRITICAL'}]
+    score, risk, c, h, m, l = lsa.compute_risk(findings)
+    assert score == 0
+    assert risk == 'LOW'
+
+
+def test_compute_risk_mixed_severity():
+    findings = [
+        {'compliant': False, 'severity_if_wrong': 'HIGH'},
+        {'compliant': False, 'severity_if_wrong': 'MEDIUM'},
+        {'compliant': True,  'severity_if_wrong': 'CRITICAL'},
+    ]
+    score, risk, c, h, m, l = lsa.compute_risk(findings)
+    assert h == 1
+    assert m == 1
+    assert c == 0
+
+
+# ── write_json ─────────────────────────────────────────────────────────────────
+
+def test_write_json_creates_file(tmp_path):
+    report = {'generated_at': '2026-01-01', 'findings': []}
+    path = str(tmp_path / 'out.json')
+    with patch('os.chmod'):
+        lsa.write_json(report, path)
+    assert os.path.exists(path)
+
+
+def test_write_json_valid_json(tmp_path):
+    report = {'generated_at': '2026-01-01', 'findings': []}
+    path = str(tmp_path / 'out.json')
+    with patch('os.chmod'):
+        lsa.write_json(report, path)
+    with open(path) as f:
+        data = json.load(f)
+    assert data['generated_at'] == '2026-01-01'
+
+
+# ── write_html ─────────────────────────────────────────────────────────────────
+
+def test_write_html_creates_file(tmp_path):
+    report = {
+        'generated_at': '2026-01-01', 'hostname': 'testhost',
+        'findings': [],
+        'summary': {
+            'total_checks': 0, 'compliant': 0, 'non_compliant': 0,
+            'unavailable': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0,
+            'overall_risk': 'LOW', 'severity_score': 0,
+        },
+    }
+    path = str(tmp_path / 'out.html')
+    with patch('os.chmod'):
+        lsa.write_html(report, path)
+    assert os.path.exists(path)
+
+
+def test_write_html_contains_green_gradient(tmp_path):
+    report = {
+        'generated_at': '2026-01-01', 'hostname': 'testhost',
+        'findings': [],
+        'summary': {
+            'total_checks': 0, 'compliant': 0, 'non_compliant': 0,
+            'unavailable': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0,
+            'overall_risk': 'LOW', 'severity_score': 0,
+        },
+    }
+    path = str(tmp_path / 'out.html')
+    with patch('os.chmod'):
+        lsa.write_html(report, path)
+    with open(path) as f:
+        content = f.read()
+    assert '#28a745' in content
+
+
+def test_write_html_contains_hostname(tmp_path):
+    report = {
+        'generated_at': '2026-01-01', 'hostname': 'my-special-host',
+        'findings': [],
+        'summary': {
+            'total_checks': 0, 'compliant': 0, 'non_compliant': 0,
+            'unavailable': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0,
+            'overall_risk': 'LOW', 'severity_score': 0,
+        },
+    }
+    path = str(tmp_path / 'out.html')
+    with patch('os.chmod'):
+        lsa.write_html(report, path)
+    with open(path) as f:
+        content = f.read()
+    assert 'my-special-host' in content
