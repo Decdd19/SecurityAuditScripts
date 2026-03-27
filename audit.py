@@ -79,6 +79,7 @@ AUDITOR_MAP: Dict[str, AuditorDef] = {
     "linux_firewall": AuditorDef(REPO_ROOT / "OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py", "fw_report",     False),
     "linux_sysctl":   AuditorDef(REPO_ROOT / "OnPrem/Linux/linux-sysctl-auditor/linux_sysctl_auditor.py",     "sysctl_report", False),
     "linux_patch":    AuditorDef(REPO_ROOT / "OnPrem/Linux/linux-patch-auditor/linux_patch_auditor.py",       "patch_report",  False),
+    "linux_ssh":      AuditorDef(REPO_ROOT / "OnPrem/Linux/linux-ssh-auditor/linux_ssh_auditor.py",           "ssh_report",    False),
     # ── Email ─────────────────────────────────────────────────────────────────
     "email": AuditorDef(
         REPO_ROOT / "Email/email-security-auditor/email_security_auditor.py",
@@ -108,7 +109,7 @@ AWS_GROUP: List[str] = [
 ]
 
 LINUX_GROUP: List[str] = [
-    "linux_user", "linux_firewall", "linux_sysctl", "linux_patch",
+    "linux_user", "linux_firewall", "linux_sysctl", "linux_patch", "linux_ssh",
 ]
 
 # Azure / Windows PS1 scripts — cannot run on Linux; print instructions only
@@ -176,6 +177,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
   --linux_firewall  iptables/nftables/ufw rules, default policy
   --linux_sysctl    Kernel hardening parameters (net, fs, kernel namespaces)
   --linux_patch     Installed packages vs available updates, CVE exposure
+  --linux_ssh       SSH daemon configuration and crypto hardening
 
   Run these directly on the target Linux host (not your workstation).
 
@@ -283,6 +285,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "linux_firewall": "iptables/nftables/ufw rules and default policy",
         "linux_sysctl":   "Kernel hardening parameters",
         "linux_patch":    "Package updates and CVE exposure",
+        "linux_ssh":      "SSH daemon configuration and crypto hardening",
     }
     linux_ind = parser.add_argument_group("individual Linux auditors")
     for name in LINUX_GROUP:

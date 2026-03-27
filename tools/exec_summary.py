@@ -54,6 +54,7 @@ KNOWN_PATTERNS = [
     "fw_report.json",
     "sysctl_report.json",
     "patch_report.json",
+    "ssh_report.json",
     # Additional AWS
     "kms_report.json",
     "elb_report.json",

@@ -120,7 +120,7 @@ class TestSelectAuditors(unittest.TestCase):
     def test_linux_selects_exactly_4(self):
         args = self._args("--linux")
         selected, _ = audit.select_auditors(args)
-        self.assertEqual(len(selected), 4)
+        self.assertEqual(len(selected), 5)
 
     def test_all_selects_aws_and_linux(self):
         args = self._args("--all")
@@ -198,7 +198,7 @@ class TestAuditorMapCompleteness(unittest.TestCase):
             self.assertIn(name, audit.AUDITOR_MAP, f"{name} missing from AUDITOR_MAP")
 
     def test_linux_group_count(self):
-        self.assertEqual(len(audit.LINUX_GROUP), 4)
+        self.assertEqual(len(audit.LINUX_GROUP), 5)
 
     def test_linux_group_all_in_map(self):
         for name in audit.LINUX_GROUP:

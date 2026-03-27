@@ -463,3 +463,51 @@ def test_run_findings_sorted_noncompliant_first(tmp_path):
             seen_true = True
         if seen_true and s is False:
             pytest.fail("Non-compliant finding appeared after compliant finding")
+
+
+# ── audit.py integration ───────────────────────────────────────────────────────
+
+def test_audit_linux_ssh_in_auditor_map():
+    import importlib.util, pathlib
+    spec = importlib.util.spec_from_file_location(
+        'audit',
+        pathlib.Path(__file__).parents[4] / 'audit.py'
+    )
+    audit = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(audit)
+    assert 'linux_ssh' in audit.AUDITOR_MAP
+
+
+def test_audit_linux_ssh_in_linux_group():
+    import importlib.util, pathlib
+    spec = importlib.util.spec_from_file_location(
+        'audit',
+        pathlib.Path(__file__).parents[4] / 'audit.py'
+    )
+    audit = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(audit)
+    assert 'linux_ssh' in audit.LINUX_GROUP
+
+
+def test_audit_ssh_output_prefix():
+    import importlib.util, pathlib
+    spec = importlib.util.spec_from_file_location(
+        'audit',
+        pathlib.Path(__file__).parents[4] / 'audit.py'
+    )
+    audit = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(audit)
+    assert audit.AUDITOR_MAP['linux_ssh'].output_prefix == 'ssh_report'
+
+
+# ── exec_summary.py integration ───────────────────────────────────────────────
+
+def test_exec_summary_ssh_report_in_known_patterns():
+    import importlib.util, pathlib
+    spec = importlib.util.spec_from_file_location(
+        'exec_summary',
+        pathlib.Path(__file__).parents[4] / 'tools' / 'exec_summary.py'
+    )
+    es = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(es)
+    assert 'ssh_report.json' in es.KNOWN_PATTERNS
