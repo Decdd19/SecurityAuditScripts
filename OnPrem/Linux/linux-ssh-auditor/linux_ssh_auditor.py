@@ -357,7 +357,7 @@ def write_html(report, path):
     for f in findings:
         color = _row_color(f)
         label = 'SKIP' if f['compliant'] is None else ('PASS' if f['compliant'] else 'FAIL')
-        icon  = 'i' if f['compliant'] is None else ('OK' if f['compliant'] else 'X')
+        icon  = 'ℹ️' if f['compliant'] is None else ('✅' if f['compliant'] else '❌')
         remediation = f.get('remediation') or ''
         rows += f"""
         <tr>
@@ -404,8 +404,8 @@ def write_html(report, path):
 </head>
 <body>
 <div class="header">
-  <h1>Linux SSH Hardening Audit Report</h1>
-  <p>Generated: {generated} | Host: {hostname} | {summary['total_checks']} checks | Risk: <span class="risk-badge">{summary['overall_risk']}</span></p>
+  <h1>🔐 Linux SSH Hardening Audit Report</h1>
+  <p>Generated: {generated} &nbsp;|&nbsp; Host: {hostname} &nbsp;|&nbsp; {summary['total_checks']} checks &nbsp;|&nbsp; Risk: <span class="risk-badge">{summary['overall_risk']}</span></p>
 </div>
 <div class="summary">
   <div class="card total"><div class="num">{summary['total_checks']}</div><div class="label">Total Checks</div></div>
@@ -422,7 +422,7 @@ def write_html(report, path):
     <tbody>{rows}</tbody>
   </table>
 </div>
-<div class="footer">Linux SSH Hardening Auditor | For internal security use only</div>
+<div class="footer">Linux SSH Hardening Auditor &nbsp;|&nbsp; For internal security use only</div>
 </body>
 </html>"""
 
