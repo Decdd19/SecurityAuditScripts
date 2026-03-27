@@ -19,7 +19,8 @@ OnPrem/
     ├── linux-user-auditor/   # Linux users, sudo, SSH, and password policy
     ├── linux-firewall-auditor/ # iptables/nftables/ufw/firewalld + auditd/syslog
     ├── linux-sysctl-auditor/ # 24 CIS kernel parameters via sysctl
-    └── linux-patch-auditor/  # Available updates, auto-update agent, kernel version
+    ├── linux-patch-auditor/  # Available updates, auto-update agent, kernel version
+    └── linux-ssh-auditor/    # SSH daemon hardening via sshd -T (21 checks)
 ```
 
 ---
@@ -38,6 +39,7 @@ OnPrem/
 | [linux_firewall_auditor.py](./Linux/linux-firewall-auditor/) | Linux | No | Python |
 | [linux_sysctl_auditor.py](./Linux/linux-sysctl-auditor/) | Linux | No | Python |
 | [linux_patch_auditor.py](./Linux/linux-patch-auditor/) | Linux | No | Python |
+| [linux_ssh_auditor.py](./Linux/linux-ssh-auditor/) | Linux | No | Python |
 
 ---
 
@@ -87,6 +89,11 @@ sudo python3 OnPrem/Linux/linux-user-auditor/linux_user_auditor.py --format html
 ### Linux — Firewall & logging audit
 ```bash
 sudo python3 OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py --format all
+```
+
+### Linux — SSH daemon hardening audit
+```bash
+sudo python3 OnPrem/Linux/linux-ssh-auditor/linux_ssh_auditor.py --format html
 ```
 
 ---
