@@ -73,6 +73,7 @@ def _eq(expected):
     def check(val):
         ok = val.strip().lower() == expected.lower()
         return ok, expected
+    check.expected_label = expected
     return check
 
 
@@ -84,6 +85,7 @@ def _lte(threshold):
         except ValueError:
             ok = False
         return ok, f"≤{threshold}"
+    check.expected_label = f"≤{threshold}"
     return check
 
 
@@ -92,26 +94,30 @@ def _loglevel_ok():
     def check(val):
         ok = val.strip().upper() in ('VERBOSE', 'INFO')
         return ok, 'VERBOSE or INFO'
+    check.expected_label = 'VERBOSE or INFO'
     return check
 
 
 def _no_weak(weak_patterns):
     """Returns check_fn: passes if none of the weak patterns appear in the value.
 
-    Used for crypto algorithm lists. Each pattern may end with '*' as a wildcard
-    meaning 'starts with this prefix'.
+    Value must be a comma-separated algorithm list (as output by sshd -T).
+    Each pattern may end with '*' as a wildcard meaning 'starts with this prefix'.
     """
+    label = f'no weak algorithms ({", ".join(weak_patterns)})'
+
     def check(val):
         algos = [a.strip().lower() for a in val.split(',')]
         for algo in algos:
             for pat in weak_patterns:
                 if pat.endswith('*'):
                     if algo.startswith(pat[:-1].lower()):
-                        return False, f'no weak algorithms ({", ".join(weak_patterns)})'
+                        return False, label
                 else:
                     if algo == pat.lower():
-                        return False, f'no weak algorithms ({", ".join(weak_patterns)})'
-        return True, f'no weak algorithms ({", ".join(weak_patterns)})'
+                        return False, label
+        return True, label
+    check.expected_label = label
     return check
 
 
@@ -187,8 +193,7 @@ SSH_CHECKS = [
 
     # ── Crypto ────────────────────────────────────────────────────────────────
     ("ciphers",
-     _no_weak(["arcfour*", "3des-cbc", "aes128-cbc", "aes192-cbc", "aes256-cbc",
-               "blowfish-cbc", "cast128-cbc", "rijndael-cbc*"]),
+     _no_weak(["arcfour*", "*-cbc"]),
      "HIGH",
      "No weak CBC/arcfour ciphers in use",
      "Remove CBC/arcfour ciphers from sshd_config Ciphers line; prefer aes*-ctr and chacha20-poly1305"),
@@ -231,7 +236,7 @@ def analyse_ssh(config):
 
         if val is None:
             # Key absent from sshd -T — compiled-in default; skip scoring
-            _, expected_str = check_fn('yes')  # dummy call to extract expected label
+            expected_str = check_fn.expected_label
             finding = {
                 'param':             key,
                 'expected':          expected_str,
