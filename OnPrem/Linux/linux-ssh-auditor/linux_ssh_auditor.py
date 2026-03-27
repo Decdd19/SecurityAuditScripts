@@ -83,7 +83,7 @@ def _lte(threshold):
             ok = int(val.strip()) <= threshold
         except ValueError:
             ok = False
-        return ok, f"<={threshold}"
+        return ok, f"≤{threshold}"
     return check
 
 
@@ -162,7 +162,7 @@ SSH_CHECKS = [
      "Set 'MaxAuthTries 4' in /etc/ssh/sshd_config, then: systemctl restart sshd"),
 
     ("logingracetime",        _lte(60),        "MEDIUM",
-     "Unauthenticated connection timeout <=60 seconds",
+     "Unauthenticated connection timeout ≤60 seconds",
      "Set 'LoginGraceTime 60' in /etc/ssh/sshd_config, then: systemctl restart sshd"),
 
     ("allowagentforwarding",  _eq("no"),       "LOW",
@@ -178,11 +178,11 @@ SSH_CHECKS = [
      "Set 'UsePAM yes' in /etc/ssh/sshd_config, then: systemctl restart sshd"),
 
     ("clientaliveinterval",   _lte(300),       "LOW",
-     "Idle session keepalive interval <=300 seconds",
+     "Idle session keepalive interval ≤300 seconds",
      "Set 'ClientAliveInterval 300' in /etc/ssh/sshd_config, then: systemctl restart sshd"),
 
     ("clientalivecountmax",   _lte(3),         "LOW",
-     "Max missed keepalives before disconnect <=3",
+     "Max missed keepalives before disconnect ≤3",
      "Set 'ClientAliveCountMax 3' in /etc/ssh/sshd_config, then: systemctl restart sshd"),
 
     # ── Crypto ────────────────────────────────────────────────────────────────
@@ -239,7 +239,7 @@ def analyse_ssh(config):
                 'compliant':         None,
                 'severity_if_wrong': severity,
                 'description':       description,
-                'flag':              f'INFO {key}: not present in sshd -T output',
+                'flag':              f'ℹ️ {key}: not present in sshd -T output',
                 'remediation':       None,
                 'risk_level':        'LOW',
             }
@@ -253,7 +253,7 @@ def analyse_ssh(config):
                     'compliant':         True,
                     'severity_if_wrong': severity,
                     'description':       description,
-                    'flag':              f'PASS {key} = {val}',
+                    'flag':              f'✅ {key} = {val}',
                     'remediation':       None,
                     'risk_level':        'LOW',
                 }
@@ -265,7 +265,7 @@ def analyse_ssh(config):
                     'compliant':         False,
                     'severity_if_wrong': severity,
                     'description':       description,
-                    'flag':              f'FAIL {key} = {val} (expected {expected_str}): {description}',
+                    'flag':              f'⚠️ {key} = {val} (expected {expected_str}): {description}',
                     'remediation':       remediation,
                     'risk_level':        severity,
                 }
