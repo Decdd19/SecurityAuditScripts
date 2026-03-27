@@ -272,3 +272,20 @@ def test_analyse_ssh_noncompliant_remediation_is_set():
     assert f['compliant'] is False
     assert f['remediation'] is not None
     assert len(f['remediation']) > 0
+
+
+def test_analyse_ssh_pubkeyaccepted_dss_fails():
+    """ssh-dss in pubkeyacceptedalgorithms → compliant=False."""
+    config = {'pubkeyacceptedalgorithms': 'rsa-sha2-256,ssh-dss'}
+    findings = lsa.analyse_ssh(config)
+    f = next(x for x in findings if x['param'] == 'pubkeyacceptedalgorithms')
+    assert f['compliant'] is False
+
+
+def test_no_weak_suffix_wildcard():
+    """*-cbc suffix pattern rejects any algo ending in -cbc."""
+    fn = lsa._no_weak(['*-cbc'])
+    assert fn('aes128-cbc')[0] is False
+    assert fn('rijndael-cbc')[0] is False
+    assert fn('aes128-ctr')[0] is True
+    assert fn('cbc')[0] is True  # no hyphen, should pass

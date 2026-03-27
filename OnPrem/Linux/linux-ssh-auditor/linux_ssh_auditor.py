@@ -102,7 +102,10 @@ def _no_weak(weak_patterns):
     """Returns check_fn: passes if none of the weak patterns appear in the value.
 
     Value must be a comma-separated algorithm list (as output by sshd -T).
-    Each pattern may end with '*' as a wildcard meaning 'starts with this prefix'.
+    Pattern matching supports three forms:
+      'prefix*'  — matches any algo starting with prefix  (e.g. 'arcfour*')
+      '*suffix'  — matches any algo ending with suffix    (e.g. '*-cbc')
+      'exact'    — literal match                          (e.g. 'ssh-dss')
     """
     label = f'no weak algorithms ({", ".join(weak_patterns)})'
 
