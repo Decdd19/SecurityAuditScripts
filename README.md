@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Decdd19/SecurityAuditScripts/actions/workflows/ci.yml/badge.svg)](https://github.com/Decdd19/SecurityAuditScripts/actions/workflows/ci.yml)
 
-A collection of security auditing scripts for AWS, Azure, on-premises infrastructure, and network services. Built for security engineers and sysadmins who want real visibility into their environment without relying on commercial tooling.
+A collection of security auditing scripts for AWS, Azure, M365, on-premises infrastructure, and network services. Built for security engineers and sysadmins who want real visibility into their environment without relying on commercial tooling.
 
 > **Purpose:** Practical, standalone scripts that give you real security insight. No agents, no SaaS dependencies — just run and review.
 
@@ -26,6 +26,10 @@ graph TD
         AZ["Entra · Storage · Activity Log · NSG\nSubscription · Key Vault · Defender"]
     end
 
+    subgraph M365["📨 M365  —  1 auditor  (PowerShell · Graph · ExO)"]
+        M["CA MFA · Legacy Auth · Mailbox Forwarding · OAuth Consent"]
+    end
+
     subgraph Windows["🪟 Windows  —  6 auditors  (PowerShell)"]
         W["AD · Local Users · Firewall\nSMB Signing · Audit Policy · BitLocker"]
     end
@@ -42,12 +46,14 @@ graph TD
     O -->|"--linux"| Linux
     O -.->|"--windows (PS1 guide only)"| Azure
     O -.->|"--windows (PS1 guide only)"| Windows
+    O -.->|"--windows (PS1 guide only)"| M365
     O -->|"--email --domain"| Email
     O -->|"--ssl / --http-headers --domain"| Network
 
     AWS --> S["📊 exec_summary.py\nCross-cloud HTML report · Security score 0–100"]
     Linux --> S
     Azure -.->|"JSON reports"| S
+    M365 -.->|"JSON reports"| S
     Email --> S
     Network --> S
 ```
@@ -115,6 +121,8 @@ SecurityAuditScripts/
 │   ├── subscription-auditor/       # Defender for Cloud, PIM, Global Admin hygiene
 │   ├── keyvault-auditor/           # Key Vault RBAC, soft delete, secret/cert/key expiry
 │   └── defender-auditor/           # Defender for Cloud plans, secure score, contacts
+├── M365/
+│   └── m365-auditor/               # CA MFA, legacy auth, mailbox forwarding, OAuth consent
 ├── Email/
 │   ├── README.md
 │   └── email-security-auditor/  # SPF, DKIM, DMARC DNS checks
@@ -178,6 +186,12 @@ SecurityAuditScripts/
 | [Subscription Auditor](./Azure/subscription-auditor/) | Audits subscription posture including Defender for Cloud, permanent privileged roles, Global Admin hygiene, and budget alerts. | JSON, CSV, HTML |
 | [Key Vault Auditor](./Azure/keyvault-auditor/) | Audits Key Vaults for RBAC vs legacy access policy, purge protection, soft delete, diagnostic logging, and expired or expiring secrets, certificates, and keys. | JSON, CSV, HTML |
 | [Defender Auditor](./Azure/defender-auditor/) | Audits Defender for Cloud plan enablement per resource type, secure score, security contacts, and auto-provisioning of monitoring agents. Supports all subscriptions. | JSON, CSV, HTML |
+
+### M365 / Exchange Online
+
+| Script | Description | Output |
+|--------|-------------|--------|
+| [M365 Auditor](./M365/m365-auditor/) | Audits Microsoft 365 tenant security controls — Conditional Access MFA enforcement, legacy authentication blocking, Exchange Online mailbox auto-forwarding to external addresses, inbox forwarding rules, and OAuth app user consent policy. Requires Microsoft.Graph and ExchangeOnlineManagement modules. | JSON, CSV, HTML |
 
 ### On-Premises
 
@@ -243,6 +257,23 @@ Install-Module Az.Accounts, Az.Resources, Az.Network, Az.Storage, Az.Monitor, Az
 Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.Graph.Identity.Governance -Scope CurrentUser
 
 Connect-AzAccount
+```
+
+### M365 / Exchange Online
+
+- PowerShell 7+
+- Az module (`Connect-AzAccount`) for tenant context
+- Microsoft Graph SDK for CA policies and consent policy
+- ExchangeOnlineManagement for mailbox and inbox rule checks
+
+```powershell
+Install-Module Az -Scope CurrentUser -Force
+Install-Module Microsoft.Graph -Scope CurrentUser -Force
+Install-Module ExchangeOnlineManagement -Scope CurrentUser -Force
+
+Connect-AzAccount
+Connect-MgGraph -Scopes "Policy.Read.All","Application.Read.All"
+Connect-ExchangeOnline -UserPrincipalName admin@contoso.com
 ```
 
 ### Email
@@ -323,6 +354,14 @@ sudo python3 OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py --for
 sudo python3 OnPrem/Linux/linux-ssh-auditor/linux_ssh_auditor.py --format html
 ```
 
+### M365
+```powershell
+git clone https://github.com/Decdd19/SecurityAuditScripts.git
+cd SecurityAuditScripts
+# Connect first — see M365 prerequisites above
+.\M365\m365-auditor\m365_auditor.ps1 -TenantDomain contoso.com -Format all
+```
+
 ### Network
 ```bash
 git clone https://github.com/Decdd19/SecurityAuditScripts.git
@@ -351,6 +390,7 @@ python3 audit.py --client "Acme Corp" --ssl --http-headers --domain acme.ie
 - OnPrem Windows scripts support `-Format` (json, csv, html, all, stdout)
 - OnPrem Linux scripts support `--format` (json, csv, html, all, stdout)
 - Network scripts support `--format` (json, csv, html, all, stdout) and `--port` flags; no credentials required
+- All JSON findings include a `cis_control` field mapping each finding to its primary CIS v8 Control (e.g. CIS 3 = Data Protection, CIS 4 = Secure Configuration, CIS 6 = Access Control Management)
 
 ---
 
