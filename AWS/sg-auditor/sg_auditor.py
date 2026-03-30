@@ -251,6 +251,7 @@ def analyse_sg(ec2, sg, region, attached_resources):
         "egress_rule_count": len(egress),
         "flags": flags,
         "remediations": remediations,
+        "cis_control": "CIS 12",
     }
 
 
@@ -286,6 +287,7 @@ def write_csv(findings, path):
         "all_traffic_open", "open_ssh", "open_rdp",
         "high_risk_ports_open", "open_port_findings",
         "unrestricted_egress", "ingress_rule_count", "egress_rule_count", "flags", "remediations",
+        "cis_control",
     ]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")

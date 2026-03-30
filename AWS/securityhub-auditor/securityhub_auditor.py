@@ -47,7 +47,7 @@ FIELDNAMES = [
     "region", "enabled", "critical_findings", "high_findings",
     "medium_findings", "low_findings", "standards_enabled",
     "standards_with_low_pass_rate", "risk_level", "severity_score",
-    "flags", "remediations",
+    "flags", "remediations", "cis_control",
 ]
 
 
@@ -255,6 +255,7 @@ def audit_region(session, region):
     finding["severity_score"] = score
     finding["risk_level"] = risk
     finding["flags"], finding["remediations"] = build_flags_and_remediations(finding)
+    finding["cis_control"] = "CIS 13"
     return finding
 
 

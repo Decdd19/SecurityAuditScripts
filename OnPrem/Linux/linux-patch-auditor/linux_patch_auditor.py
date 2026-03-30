@@ -277,6 +277,7 @@ def analyse_patch_status():
             "severity_score": 3,
             "flags": ["⚠️ Could not detect package manager — manual verification required"],
             "remediations": ["Verify system has apt, yum, dnf, or zypper installed"],
+            "cis_control": "CIS 7",
         }
 
     total_updates, security_updates, pending_pkgs = get_available_updates(pm)
@@ -369,6 +370,7 @@ def analyse_patch_status():
         "severity_score": score,
         "flags": flags,
         "remediations": [r for r in remediations if r],
+        "cis_control": "CIS 7",
     }
 
 

@@ -204,6 +204,7 @@ def write_csv(findings, path):
         return
     fieldnames = [
         'finding_type', 'username', 'detail', 'score', 'severity', 'recommendation',
+        'cis_control',
     ]
     with open(path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
@@ -376,6 +377,7 @@ def audit(output_prefix='user_report', fmt='all'):
                 'recommendation': (
                     'Lock the account immediately with `passwd -l {username}` or set a strong password.'
                 ),
+                'cis_control': 'CIS 5',
             })
 
     # ── Check: UidZeroNonRoot (score 9) ──────────────────────────────────────
@@ -392,6 +394,7 @@ def audit(output_prefix='user_report', fmt='all'):
                 'recommendation': (
                     'Remove or reassign this account. Only the canonical root account should have UID 0.'
                 ),
+                'cis_control': 'CIS 5',
             })
 
     # ── Check: DirectRootSSH (score 8) ───────────────────────────────────────
@@ -407,6 +410,7 @@ def audit(output_prefix='user_report', fmt='all'):
                 "Set 'PermitRootLogin no' (or 'prohibit-password') in /etc/ssh/sshd_config "
                 "and restart sshd."
             ),
+            'cis_control': 'CIS 5',
         })
 
     # ── Check: SSHPasswordAuthEnabled (score 6) ──────────────────────────────
@@ -426,6 +430,7 @@ def audit(output_prefix='user_report', fmt='all'):
                 "Set 'PasswordAuthentication no' in /etc/ssh/sshd_config and use key-based "
                 "authentication only. Restart sshd after the change."
             ),
+            'cis_control': 'CIS 5',
         })
 
     # ── Check: PasswordlessRootEquivalent / SudoAllNopasswd / SudoAllCommandsGranted ──
@@ -449,6 +454,7 @@ def audit(output_prefix='user_report', fmt='all'):
                     'Remove NOPASSWD or restrict to specific commands. Apply the principle of '
                     'least privilege; no user should have unrestricted passwordless sudo.'
                 ),
+                'cis_control': 'CIS 5',
             })
         elif nopasswd and not all_cmds:
             # NOPASSWD for specific commands
@@ -465,6 +471,7 @@ def audit(output_prefix='user_report', fmt='all'):
                     'Review whether NOPASSWD is necessary. Prefer requiring password confirmation '
                     'for all sudo usage.'
                 ),
+                'cis_control': 'CIS 5',
             })
         elif all_cmds and not nopasswd:
             # ALL commands with password
@@ -481,6 +488,7 @@ def audit(output_prefix='user_report', fmt='all'):
                     'Restrict sudo rules to only the specific commands required. '
                     'Avoid granting blanket ALL access.'
                 ),
+                'cis_control': 'CIS 5',
             })
 
     # ── Check: NoPasswordExpiry (score 5) ────────────────────────────────────
@@ -502,6 +510,7 @@ def audit(output_prefix='user_report', fmt='all'):
                 'Set PASS_MAX_DAYS to 90 or fewer days in /etc/login.defs and apply per-account '
                 'expiry with `chage -M 90 <username>`.'
             ),
+            'cis_control': 'CIS 5',
         })
 
     # Per-user shadow max_days == 99999
@@ -522,6 +531,7 @@ def audit(output_prefix='user_report', fmt='all'):
                 'recommendation': (
                     f"Run `chage -M 90 {username}` to enforce a 90-day maximum password age."
                 ),
+                'cis_control': 'CIS 5',
             })
 
     # ── Check: WeakPasswordPolicy (score 6) ──────────────────────────────────
@@ -542,6 +552,7 @@ def audit(output_prefix='user_report', fmt='all'):
                 'Set PASS_MIN_LEN to at least 12 in /etc/login.defs. Consider also enabling '
                 'pam_pwquality for complexity requirements.'
             ),
+            'cis_control': 'CIS 5',
         })
 
     # ── Check: StaleUser (score 4) ────────────────────────────────────────────
@@ -570,6 +581,7 @@ def audit(output_prefix='user_report', fmt='all'):
                     f"Disable or remove the account: `usermod -L {u['username']}` or "
                     f"`userdel -r {u['username']}`."
                 ),
+                'cis_control': 'CIS 5',
             })
 
     # ── Check: HomeDirectoryWorldReadable (score 4) ───────────────────────────
@@ -593,6 +605,7 @@ def audit(output_prefix='user_report', fmt='all'):
                 'recommendation': (
                     f"Run `chmod o-rx {home}` to remove world read/execute permissions."
                 ),
+                'cis_control': 'CIS 5',
             })
 
     # ── Check: WorldWritableSudoers (score 8) ────────────────────────────────
@@ -619,6 +632,7 @@ def audit(output_prefix='user_report', fmt='all'):
                 'recommendation': (
                     f"Run `chmod 440 {sp}` immediately. Sudoers files must not be world-writable."
                 ),
+                'cis_control': 'CIS 5',
             })
 
     # ── Sort and summarise ────────────────────────────────────────────────────

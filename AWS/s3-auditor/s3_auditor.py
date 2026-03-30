@@ -273,6 +273,7 @@ def analyse_bucket(s3, bucket_name):
         "policy_findings": policy_findings,
         "flags": flags,
         "remediations": remediations,
+        "cis_control": "CIS 3",
     }
 
 
@@ -295,6 +296,7 @@ def write_csv(findings, path):
         "encryption_algorithm", "kms_key", "versioning_status",
         "mfa_delete", "logging_enabled", "log_target_bucket",
         "lifecycle_rules", "policy_findings", "flags", "remediations",
+        "cis_control",
     ]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")

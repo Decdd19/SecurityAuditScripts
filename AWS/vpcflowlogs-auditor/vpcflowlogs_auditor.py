@@ -53,7 +53,7 @@ FIELDNAMES = [
     "vpc_id", "vpc_name", "region", "is_default", "flow_log_count",
     "has_all_traffic_log", "has_accept_only_log", "has_reject_only_log",
     "destinations", "uses_custom_format", "cw_short_retention",
-    "risk_level", "severity_score", "flags", "remediations",
+    "risk_level", "severity_score", "flags", "remediations", "cis_control",
 ]
 
 
@@ -142,6 +142,7 @@ def analyse_vpc(ec2, logs_client, vpc, flow_logs):
         "severity_score": score,
         "flags": flags,
         "remediations": remediations,
+        "cis_control": "CIS 8",
     }
 
 

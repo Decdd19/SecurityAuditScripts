@@ -373,6 +373,7 @@ def audit_root(session):
         "support_plan": support_plan,
         "flags": flags,
         "remediations": remediations,
+        "cis_control": "CIS 5",
     }
 
 
@@ -402,7 +403,7 @@ def write_csv(findings, path):
         "root_last_console_login", "root_used_recently",
         "root_key_last_used", "password_policy_issues",
         "missing_alternate_contacts", "is_org_management_account",
-        "support_plan", "flags", "remediations",
+        "support_plan", "flags", "remediations", "cis_control",
     ]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")

@@ -426,6 +426,7 @@ def analyse_user(iam, user, scp_denied):
         ],
         "total_actions_count": len(all_actions),
         "scp_restrictions_applied": len(scp_denied) > 0,
+        "cis_control": "CIS 6",
     }
     finding["flags"], finding["remediations"] = _build_iam_flags(finding)
     return finding
@@ -502,6 +503,7 @@ def analyse_role(iam, role, scp_denied):
         "privilege_escalation_paths": privesc,
         "total_actions_count": len(all_actions),
         "scp_restrictions_applied": len(scp_denied) > 0,
+        "cis_control": "CIS 6",
     }
     finding["flags"], finding["remediations"] = _build_iam_flags(finding)
     return finding
@@ -555,6 +557,7 @@ def analyse_group(iam, group, scp_denied):
         "privilege_escalation_paths": privesc,
         "total_actions_count": len(all_actions),
         "scp_restrictions_applied": len(scp_denied) > 0,
+        "cis_control": "CIS 6",
     }
     finding["flags"], finding["remediations"] = _build_iam_flags(finding)
     return finding
@@ -578,7 +581,7 @@ def write_csv(findings, path):
         "permission_boundary", "cross_account_trust", "external_id_required",
         "high_risk_actions", "privilege_escalation_paths",
         "access_key_issues", "total_actions_count", "scp_restrictions_applied",
-        "groups", "members", "trust_principals",
+        "groups", "members", "trust_principals", "cis_control",
     ]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")

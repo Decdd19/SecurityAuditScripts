@@ -56,7 +56,7 @@ FIELDNAMES = [
     "lb_name", "lb_arn", "lb_type", "scheme", "region", "vpc_id", "state",
     "access_logs_enabled", "deletion_protection", "http_redirect_to_https",
     "has_http_listener", "outdated_ssl_policy", "ssl_policies_found",
-    "waf_associated", "severity_score", "risk_level", "flags", "remediations",
+    "waf_associated", "severity_score", "risk_level", "flags", "remediations", "cis_control",
 ]
 
 
@@ -306,6 +306,7 @@ def analyse_lb(elbv2_client, wafv2_client, lb, region):
         "risk_level": risk_level,
         "flags": flags,
         "remediations": remediations,
+        "cis_control": "CIS 12",
     }
 
 

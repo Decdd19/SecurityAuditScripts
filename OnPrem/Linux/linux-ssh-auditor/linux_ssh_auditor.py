@@ -254,6 +254,7 @@ def analyse_ssh(config):
                 'flag':              f'ℹ️ {key}: not present in sshd -T output',
                 'remediation':       None,
                 'risk_level':        'LOW',
+                'cis_control':       'CIS 4',
             }
         else:
             ok, expected_str = check_fn(val)
@@ -268,6 +269,7 @@ def analyse_ssh(config):
                     'flag':              f'✅ {key} = {val}',
                     'remediation':       None,
                     'risk_level':        'LOW',
+                    'cis_control':       'CIS 4',
                 }
             else:
                 finding = {
@@ -280,6 +282,7 @@ def analyse_ssh(config):
                     'flag':              f'⚠️ {key} = {val} (expected {expected_str}): {description}',
                     'remediation':       remediation,
                     'risk_level':        severity,
+                    'cis_control':       'CIS 4',
                 }
         findings.append(finding)
     return findings
@@ -322,7 +325,7 @@ def write_csv(findings, path):
         return
     fieldnames = [
         'param', 'expected', 'actual', 'compliant', 'severity_if_wrong',
-        'description', 'flag', 'remediation',
+        'description', 'flag', 'remediation', 'cis_control',
     ]
     with open(path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')

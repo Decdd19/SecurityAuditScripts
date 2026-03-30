@@ -101,6 +101,7 @@ def check_iptables(findings):
             'score': 8,
             'severity': severity_label(8),
             'recommendation': 'Set the default INPUT policy to DROP: iptables -P INPUT DROP',
+            'cis_control': 'CIS 12',
         })
 
     # Check for -j ACCEPT with 0.0.0.0/0 as both source and destination (allow-all rule)
@@ -111,6 +112,7 @@ def check_iptables(findings):
             'score': 9,
             'severity': severity_label(9),
             'recommendation': 'Remove broad ACCEPT rules and replace with specific port/source allowances.',
+            'cis_control': 'CIS 12',
         })
 
     # Check for dangerous ports open to all
@@ -125,6 +127,7 @@ def check_iptables(findings):
                 'recommendation': f'Restrict port {port} ({svc}) to known source IPs or remove the rule.',
                 'port': port,
                 'service': svc,
+                'cis_control': 'CIS 12',
             })
 
     # Check ip6tables
@@ -136,6 +139,7 @@ def check_iptables(findings):
             'score': 7,
             'severity': severity_label(7),
             'recommendation': 'Apply equivalent ip6tables rules to your IPv4 iptables policy.',
+            'cis_control': 'CIS 12',
         })
 
 
@@ -148,6 +152,7 @@ def check_ufw(findings):
             'score': 8,
             'severity': severity_label(8),
             'recommendation': 'Enable ufw: ufw enable',
+            'cis_control': 'CIS 12',
         })
         return
 
@@ -158,6 +163,7 @@ def check_ufw(findings):
             'score': 8,
             'severity': severity_label(8),
             'recommendation': 'Set default incoming policy to deny: ufw default deny incoming',
+            'cis_control': 'CIS 12',
         })
 
     for port, (svc, score) in DANGEROUS_PORTS.items():
@@ -170,6 +176,7 @@ def check_ufw(findings):
                 'recommendation': f'Restrict port {port} ({svc}) to specific source IPs: ufw allow from <IP> to any port {port}',
                 'port': port,
                 'service': svc,
+                'cis_control': 'CIS 12',
             })
 
 
@@ -182,6 +189,7 @@ def check_nftables(findings):
             'score': 9,
             'severity': severity_label(9),
             'recommendation': 'Define an nftables ruleset with default drop policies for input and forward chains.',
+            'cis_control': 'CIS 12',
         })
         return
 
@@ -192,6 +200,7 @@ def check_nftables(findings):
             'score': 8,
             'severity': severity_label(8),
             'recommendation': 'Change chain policy to "drop": e.g., chain input { type filter hook input priority 0; policy drop; }',
+            'cis_control': 'CIS 12',
         })
 
 
@@ -204,6 +213,7 @@ def check_auditd(findings):
             'score': 7,
             'severity': severity_label(7),
             'recommendation': 'Install and enable auditd: apt install auditd && systemctl enable --now auditd',
+            'cis_control': 'CIS 12',
         })
         return
 
@@ -215,6 +225,7 @@ def check_auditd(findings):
             'score': 6,
             'severity': severity_label(6),
             'recommendation': 'Load a comprehensive ruleset, e.g. from /usr/share/doc/auditd/examples/rules/ or the CIS benchmark rules.',
+            'cis_control': 'CIS 12',
         })
 
     # Check privileged command rules
@@ -225,6 +236,7 @@ def check_auditd(findings):
             'score': 5,
             'severity': severity_label(5),
             'recommendation': 'Add rules to audit privileged commands: -a always,exit -F perm=x -F auid>=1000 -F auid!=4294967295 -k privileged',
+            'cis_control': 'CIS 12',
         })
 
 
@@ -242,6 +254,7 @@ def check_syslog(findings):
             'score': 6,
             'severity': severity_label(6),
             'recommendation': 'Install and enable rsyslog: apt install rsyslog && systemctl enable --now rsyslog',
+            'cis_control': 'CIS 12',
         })
 
 
@@ -255,6 +268,7 @@ def check_docker_iptables(findings):
             'score': 8,
             'severity': severity_label(8),
             'recommendation': 'Remove "iptables": false from /etc/docker/daemon.json and restart Docker, or implement an alternative container network policy.',
+            'cis_control': 'CIS 12',
         })
 
     # Also check if DOCKER chain exists in iptables
@@ -277,6 +291,7 @@ def check_firewall_persistence(findings):
                 'score': 3,
                 'severity': severity_label(3),
                 'recommendation': 'Install iptables-persistent and save rules: apt install iptables-persistent && netfilter-persistent save',
+                'cis_control': 'CIS 12',
             })
 
 
@@ -292,7 +307,7 @@ def write_json(report, path):
 def write_csv(findings, path):
     if not findings:
         return
-    fieldnames = ['finding_type', 'detail', 'port', 'service', 'score', 'severity', 'recommendation']
+    fieldnames = ['finding_type', 'detail', 'port', 'service', 'score', 'severity', 'recommendation', 'cis_control']
     with open(path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
         writer.writeheader()
@@ -411,6 +426,7 @@ def audit(output_prefix='fw_report', fmt='all'):
             'score': 9,
             'severity': 'CRITICAL',
             'recommendation': 'Install and enable a firewall (ufw, firewalld, or iptables).',
+            'cis_control': 'CIS 12',
         })
     elif backend == 'ufw':
         check_ufw(findings)
@@ -423,6 +439,7 @@ def audit(output_prefix='fw_report', fmt='all'):
                 'score': 8,
                 'severity': severity_label(8),
                 'recommendation': 'Set zone target to default or DROP.',
+                'cis_control': 'CIS 12',
             })
     elif backend == 'nftables':
         check_nftables(findings)

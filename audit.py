@@ -121,6 +121,7 @@ WINDOWS_PS1: Dict[str, str] = {
     "subscription": "Azure/subscription-auditor/subscription_auditor.ps1",
     "entra":        "Azure/entra-auditor/entra_auditor.ps1",
     "defender":     "Azure/defender-auditor/defender_auditor.ps1",
+    "m365":         "M365/m365-auditor/m365_auditor.ps1",
 }
 
 
@@ -598,6 +599,8 @@ def print_banner() -> None:
     info.append(" 4 auditors   users · fw · sysctl · patch\n")
     info.append("  Azure  ", style="bold cyan")
     info.append(" 7 PS1 scripts keyvault · nsg · defender…\n")
+    info.append("  M365   ", style="bold blue")
+    info.append(" 1 PS1 script  CA · legacy auth · mailbox · OAuth\n")
     info.append("  Email  ", style="bold magenta")
     info.append(" 1 auditor    SPF · DKIM · DMARC\n")
     info.append("─" * 31 + "\n", style="dim")

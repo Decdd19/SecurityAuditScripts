@@ -48,6 +48,7 @@ FIELDNAMES = [
     "private_ip", "imds_v2_required", "imds_hop_limit", "has_instance_profile",
     "in_default_vpc", "unencrypted_volumes", "public_snapshots",
     "severity_score", "risk_level", "flags", "remediations",
+    "cis_control",
 ]
 
 
@@ -255,6 +256,7 @@ def analyse_instance(ec2_client, instance, default_vpc_id=None, account_public_s
         "risk_level": risk_level,
         "flags": flags,
         "remediations": remediations,
+        "cis_control": "CIS 4",
     }
 
 

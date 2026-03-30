@@ -234,6 +234,7 @@ def analyse_key(kms, key_id, key_arn, region):
         "risk_level": risk_level,
         "flags": flags,
         "remediations": remediations,
+        "cis_control": "CIS 3",
     }
 
 
@@ -253,7 +254,7 @@ def write_csv(findings, path):
         "key_id", "key_arn", "aliases", "key_state", "key_enabled",
         "key_spec", "key_manager", "multi_region", "rotation_enabled",
         "rotation_applicable", "public_policy", "creation_date", "region",
-        "severity_score", "risk_level", "flags", "remediations",
+        "severity_score", "risk_level", "flags", "remediations", "cis_control",
     ]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")

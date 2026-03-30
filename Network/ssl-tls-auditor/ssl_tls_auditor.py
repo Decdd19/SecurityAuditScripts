@@ -139,6 +139,7 @@ def _finding(check_id: str, name: str, status: str, risk_level: str,
         "detail": detail,
         "remediation": remediation,
         "pillar": "tls",
+        "cis_control": "CIS 4",
     }
 
 
@@ -501,7 +502,7 @@ def write_csv(findings: list, prefix: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if not findings:
         return
-    fields = ["check_id", "name", "status", "risk_level", "severity_score", "detail", "remediation"]
+    fields = ["check_id", "name", "status", "risk_level", "severity_score", "detail", "remediation", "cis_control"]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()

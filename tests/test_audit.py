@@ -205,7 +205,7 @@ class TestAuditorMapCompleteness(unittest.TestCase):
             self.assertIn(name, audit.AUDITOR_MAP, f"{name} missing from AUDITOR_MAP")
 
     def test_windows_ps1_count(self):
-        self.assertEqual(len(audit.WINDOWS_PS1), 7)
+        self.assertEqual(len(audit.WINDOWS_PS1), 8)  # 7 Azure + m365
 
     def test_specific_aws_auditors_present(self):
         expected = ["s3", "ec2", "sg", "cloudtrail", "rds", "iam",

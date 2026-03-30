@@ -57,7 +57,7 @@ FIELDNAMES = [
     "s3_protection", "eks_protection", "malware_protection",
     "rds_protection", "runtime_monitoring",
     "findings_export_enabled", "risk_level", "severity_score",
-    "flags", "remediations",
+    "flags", "remediations", "cis_control",
 ]
 
 
@@ -247,6 +247,7 @@ def audit_region(session, region):
             "severity_score": score,
             "flags": flags,
             "remediations": remediations,
+            "cis_control": "CIS 13",
         }
 
     detector_id = detectors[0]
@@ -284,6 +285,7 @@ def audit_region(session, region):
         "severity_score": score,
         "flags": flags,
         "remediations": remediations,
+        "cis_control": "CIS 13",
     }
 
 

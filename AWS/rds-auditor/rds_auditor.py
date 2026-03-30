@@ -53,6 +53,7 @@ FIELDNAMES = [
     "encrypted", "kms_key", "backup_retention_days", "deletion_protection",
     "iam_auth", "auto_minor_upgrade", "multi_az", "using_default_parameter_group",
     "public_snapshots", "severity_score", "risk_level", "flags", "remediations",
+    "cis_control",
 ]
 
 
@@ -304,6 +305,7 @@ def analyse_instance(rds_client, db, region=""):
         "risk_level": risk_level,
         "flags": flags,
         "remediations": remediations,
+        "cis_control": "CIS 3",
     }
 
 

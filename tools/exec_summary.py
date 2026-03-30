@@ -66,6 +66,27 @@ KNOWN_PATTERNS = [
     "ssl_report.json",
     # Network / HTTP Headers
     "http_headers_report.json",
+    # M365 / Exchange Online
+    "m365_report.json",
+]
+
+# Azure/Windows patterns that require manual copy-back from a Windows machine.
+# exec_summary warns if none of these are present (silent incompleteness risk).
+AZURE_WINDOWS_PATTERNS = [
+    "keyvault_report.json",
+    "storage_report.json",
+    "nsg_report.json",
+    "activitylog_report.json",
+    "subscription_report.json",
+    "entra_report.json",
+    "defender_report.json",
+    "ad_report.json",
+    "localuser_report.json",
+    "winfirewall_report.json",
+    "smbsigning_report.json",
+    "auditpolicy_report.json",
+    "bitlocker_report.json",
+    "m365_report.json",
 ]
 
 # Human-readable names for display
@@ -87,6 +108,7 @@ PILLAR_LABELS = {
     "activitylog": "Azure Activity Log",
     "subscription": "Azure Subscription",
     "entra": "Azure Entra ID",
+    "m365": "M365 / Exchange Online",
     "ad": "Active Directory",
     "localuser": "Local Users",
     "winfirewall": "Windows Firewall",
@@ -381,11 +403,30 @@ def write_html(overall_score, grade, pillar_stats, top_findings, quick_wins,
     log.info(f"Executive summary written: {path}")
 
 
+def warn_missing_azure_windows(input_dir):
+    """Warn about Azure/Windows report files that were not copied back."""
+    found_patterns = {os.path.basename(p) for p in discover_reports(input_dir)}
+    missing = [p for p in AZURE_WINDOWS_PATTERNS if p not in found_patterns]
+    if missing and len(missing) < len(AZURE_WINDOWS_PATTERNS):
+        # Some Azure/Windows files present but others absent — targeted warning
+        log.warning(
+            "The following Azure/Windows report files were not found in %s — "
+            "these pillars will be absent from the executive summary. "
+            "Copy the JSON files from your Windows machine first:\n  %s",
+            input_dir,
+            "\n  ".join(missing),
+        )
+    elif missing and len(missing) == len(AZURE_WINDOWS_PATTERNS):
+        # All absent — likely a pure AWS/Linux run; suppress warning
+        pass
+
+
 def run(input_dir=".", output_path="exec_summary.html", top_n=10, max_wins=10):
     """Discover reports, compute stats, write HTML summary."""
     report_paths = discover_reports(input_dir)
     if not report_paths:
         log.warning(f"No known report files found in {input_dir}")
+    warn_missing_azure_windows(input_dir)
 
     pillar_stats_list = []
     all_findings_flat = []

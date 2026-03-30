@@ -269,6 +269,7 @@ def analyse_trail(ct, s3, trail):
         "delivery_error": delivery_error,
         "flags": flags,
         "remediations": remediations,
+        "cis_control": "CIS 8",
     }
 
 
@@ -306,6 +307,7 @@ def write_csv(findings, path):
         "cloudwatch_logs", "cloudwatch_group", "s3_bucket", "s3_bucket_public",
         "sns_enabled", "management_events", "data_events", "read_write_type",
         "last_delivery", "delivery_error", "flags", "remediations",
+        "cis_control",
     ]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")

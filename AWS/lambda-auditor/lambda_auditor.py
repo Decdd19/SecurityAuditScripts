@@ -76,7 +76,7 @@ FIELDNAMES = [
     "has_dlq", "tracing_enabled", "in_vpc",
     "reserved_concurrency", "deprecated_runtime",
     "secret_env_keys", "has_admin_role",
-    "risk_level", "severity_score", "flags", "remediations",
+    "risk_level", "severity_score", "flags", "remediations", "cis_control",
 ]
 
 
@@ -292,6 +292,7 @@ def analyse_function(lambda_client, iam, fn_config):
     finding["severity_score"] = score
     finding["risk_level"] = risk_level
     finding["flags"], finding["remediations"] = build_flags_and_remediations(finding)
+    finding["cis_control"] = "CIS 4"
     return finding
 
 

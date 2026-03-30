@@ -120,6 +120,7 @@ def analyse_sysctl():
                 "flag": f"\u2139\ufe0f {param}: not available (kernel module not loaded?)",
                 "remediation": f"Verify kernel supports {param} or load required module",
                 "risk_level": "LOW",
+                "cis_control": "CIS 4",
             }
         elif actual == expected:
             result = {
@@ -132,6 +133,7 @@ def analyse_sysctl():
                 "flag": f"\u2705 {param} = {actual}",
                 "remediation": None,
                 "risk_level": "LOW",
+                "cis_control": "CIS 4",
             }
         else:
             result = {
@@ -148,6 +150,7 @@ def analyse_sysctl():
                     f"(apply with: sysctl -p /etc/sysctl.d/99-hardening.conf)"
                 ),
                 "risk_level": severity_if_wrong,
+                "cis_control": "CIS 4",
             }
         results.append(result)
     return results
