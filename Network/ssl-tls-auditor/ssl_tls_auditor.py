@@ -42,6 +42,13 @@ _DSA_OID = bytes([0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x01])               # 1.2
 
 WEAK_CIPHER_KEYWORDS = frozenset({"RC4", "DES", "3DES", "NULL", "EXPORT", "ANON"})
 
+RISK_LEVEL_DESCRIPTIONS = {
+    "CRITICAL": "Critical issues were found that require immediate attention. One or more checks indicate active security risks that could expose your site to attacks or browser security errors right now.",
+    "HIGH": "High-severity issues were found. These represent significant security gaps that should be addressed within 30 days.",
+    "MEDIUM": "Medium-severity issues were found. These reduce your security posture but do not represent immediate exploitable risk. Address within 90 days.",
+    "LOW": "Only low-severity issues were found. Your SSL/TLS configuration is in good shape. Review the findings below for minor improvements.",
+}
+
 
 # ── SSL/TLS wrapper (thin — mock this in tests) ───────────────────────────────
 
@@ -510,7 +517,8 @@ def write_csv(findings: list, prefix: str) -> None:
     log.info("CSV report: %s", path)
 
 
-def write_html(report: dict, prefix: str) -> None:
+def write_html(report: dict, prefix: str, client_name: str = "",
+               assessor: str = "", back_link: str = "exec_summary.html") -> None:
     path = Path(f"{prefix}.html")
     path.parent.mkdir(parents=True, exist_ok=True)
     domain = report.get("domain", "")
@@ -536,6 +544,15 @@ def write_html(report: dict, prefix: str) -> None:
     fail_colour = "#dc3545" if n_fail > 0 else "#6c757d"
     warn_colour = "#fd7e14" if n_warn > 0 else "#6c757d"
 
+    risk_interp = RISK_LEVEL_DESCRIPTIONS.get(overall, "Review the findings below.")
+    risk_interp_html = (
+        f'<div style="background:#fff;border-left:4px solid {risk_colour};margin:0 40px 0;'
+        f'padding:14px 20px;border-radius:0 8px 8px 0;box-shadow:0 2px 8px rgba(0,0,0,.06);">'
+        f'<strong style="color:{risk_colour}">{html.escape(overall)} Risk</strong> — '
+        f'{html.escape(risk_interp)}'
+        f'</div>'
+    )
+
     rows = ""
     for f in findings:
         st = f.get("status", "")
@@ -557,16 +574,34 @@ def write_html(report: dict, prefix: str) -> None:
             f"</tr>\n"
         )
 
+    client_meta = ""
+    if client_name or assessor:
+        parts = []
+        if client_name:
+            parts.append(html.escape(client_name))
+        if assessor:
+            parts.append(f"Prepared by: {html.escape(assessor)}")
+        client_meta = " &nbsp;|&nbsp; ".join(parts)
+        client_meta = f'<p style="color:#ccc;margin:6px 0 0;font-size:0.88em">{client_meta}</p>'
+
+    nav_link = (f'<div style="padding:12px 40px;background:#fff;border-bottom:1px solid #e0e0e0;">'
+                f'<a href="{html.escape(back_link)}" style="color:#1a1a2e;font-size:0.9em;'
+                f'text-decoration:none;">← Back to Executive Summary</a></div>'
+                if back_link else "")
+
+    footer_client = html.escape(client_name) if client_name else "Security Assessment"
+    footer_assessor = html.escape(assessor) if assessor else "SecurityAuditScripts"
+
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SSL/TLS Certificate Audit \u2014 {html.escape(domain)}</title>
+<title>SSL/TLS Audit \u2014 {html.escape(domain)}{' \u2014 ' + html.escape(client_name) if client_name else ''}</title>
 <style>
   body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
   .header {{ background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 30px 40px; }}
-  .header h1 {{ margin: 0 0 8px; font-size: 1.8em; }}
-  .header p {{ margin: 0; opacity: 0.85; }}
+  .header h1 {{ margin: 0 0 8px; font-size: 1.6em; font-weight: 700; }}
+  .header p {{ margin: 4px 0 0; color: #ccc; font-size: 0.92em; }}
   .summary {{ display: flex; gap: 20px; padding: 20px 40px; flex-wrap: wrap; }}
   .card {{ background: white; border-radius: 8px; padding: 20px 30px; flex: 1; min-width: 120px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
   .card .num {{ font-size: 2.4em; font-weight: bold; }}
@@ -574,18 +609,24 @@ def write_html(report: dict, prefix: str) -> None:
   .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}
   table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
   th {{ background: #1a1a2e; color: white; padding: 12px 15px; text-align: left; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }}
-  td {{ padding: 10px 15px; border-bottom: 1px solid #ecf0f1; vertical-align: top; }}
+  td {{ padding: 10px 15px; border-bottom: 1px solid #ecf0f1; vertical-align: top; font-size: 0.88em; }}
   tr:last-child td {{ border-bottom: none; }}
   tr:hover td {{ background: #f8f9ff; }}
-  .footer {{ text-align: center; padding: 20px; color: #999; font-size: 0.85em; }}
+  .footer {{ text-align: center; padding: 20px; color: #999; font-size: 0.85em; border-top: 1px solid #e0e0e0; margin-top: 20px; }}
 </style>
 </head>
 <body>
 <div class="header">
-  <h1>\U0001f512 SSL/TLS Certificate Audit</h1>
+  <h1>&#128274; SSL/TLS Certificate Audit</h1>
   <p><strong>Domain:</strong> {html.escape(domain)} &nbsp;|&nbsp; Port: {port} &nbsp;|&nbsp;
      <span style="background:{risk_colour};color:#fff;padding:3px 12px;border-radius:12px;font-weight:700">{html.escape(overall)}</span>
-     &nbsp;|&nbsp; Score: {score} &nbsp;|&nbsp; Generated: {html.escape(generated)}</p>
+     &nbsp;|&nbsp; Severity Score: {score}</p>
+  <p>Generated: {html.escape(generated)}</p>
+  {client_meta}
+</div>
+{nav_link}
+<div style="padding:20px 40px 0">
+  {risk_interp_html}
 </div>
 <div class="summary">
   <div class="card"><div class="num" style="color:#3498db">{total}</div><div class="label">Total Checks</div></div>
@@ -599,7 +640,7 @@ def write_html(report: dict, prefix: str) -> None:
 <tbody>{rows}</tbody>
 </table>
 </div>
-<div class="footer">For internal use only &nbsp;|&nbsp; SecurityAuditScripts</div>
+<div class="footer">Confidential &nbsp;|&nbsp; {footer_client} &nbsp;|&nbsp; {footer_assessor}</div>
 </body>
 </html>"""
 
@@ -609,7 +650,8 @@ def write_html(report: dict, prefix: str) -> None:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def run(domain: str, port: int, output_prefix: str, fmt: str) -> dict:
+def run(domain: str, port: int, output_prefix: str, fmt: str,
+        client_name: str = "", assessor: str = "") -> dict:
     """Run all TLS checks for domain and write reports. Returns report dict."""
     findings = run_audit(domain, port)
     overall_risk, score = compute_overall_risk(findings)
@@ -637,7 +679,7 @@ def run(domain: str, port: int, output_prefix: str, fmt: str) -> dict:
     if fmt in ("csv", "all"):
         write_csv(findings, output_prefix)
     if fmt in ("html", "all"):
-        write_html(report, output_prefix)
+        write_html(report, output_prefix, client_name=client_name, assessor=assessor)
     if fmt == "stdout":
         print(json.dumps(report, indent=2, default=str))
 
@@ -672,5 +714,10 @@ if __name__ == "__main__":
         choices=["json", "csv", "html", "all", "stdout"],
         default="all",
     )
+    parser.add_argument("--client-name", default="",
+                        help="Client name to display in the report header")
+    parser.add_argument("--assessor", default="",
+                        help="Assessor / consultant name to display in the report")
     args = parser.parse_args()
-    run(args.domain, args.port, args.output, args.format)
+    run(args.domain, args.port, args.output, args.format,
+        client_name=args.client_name, assessor=args.assessor)

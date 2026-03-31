@@ -7,7 +7,7 @@ Audits kernel security parameters via `sysctl` for CIS Benchmark compliance acro
 ## ⚙️ Requirements
 
 - Python 3.7+
-- Run as root (`sudo`) to read all sysctl values accurately
+- No elevated privileges required — `sysctl` parameters are world-readable
 
 ---
 
@@ -15,13 +15,10 @@ Audits kernel security parameters via `sysctl` for CIS Benchmark compliance acro
 
 ```bash
 # Full audit — writes sysctl_report.json, .csv, .html
-sudo python3 linux_sysctl_auditor.py
+python3 linux_sysctl_auditor.py --format all
 
 # HTML report only
-sudo python3 linux_sysctl_auditor.py --format html --output sysctl_report
-
-# All formats
-sudo python3 linux_sysctl_auditor.py --format all
+python3 linux_sysctl_auditor.py --format html --output sysctl_report
 ```
 
 ---

@@ -520,7 +520,7 @@ def run_parallel(
 
 # ── Executive summary ─────────────────────────────────────────────────────────
 
-def run_exec_summary(client_dir: Path) -> Optional[Path]:
+def run_exec_summary(client_dir: Path, client_name: str = "") -> Optional[Path]:
     """Run exec_summary.py over the client output directory."""
     exec_script = REPO_ROOT / "tools" / "exec_summary.py"
     if not exec_script.exists():
@@ -533,6 +533,8 @@ def run_exec_summary(client_dir: Path) -> Optional[Path]:
         "--input-dir", str(client_dir),
         "--output", str(html_path),
     ]
+    if client_name:
+        cmd += ["--client-name", client_name]
     console.print("\n[bold]Running executive summary…[/bold]")
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=120)
@@ -687,7 +689,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     html_path: Optional[Path] = None
     if results:
-        html_path = run_exec_summary(client_dir)
+        html_path = run_exec_summary(client_dir, client_name=args.client)
         print_summary(results, html_path)
 
     if args.open and html_path and html_path.exists():

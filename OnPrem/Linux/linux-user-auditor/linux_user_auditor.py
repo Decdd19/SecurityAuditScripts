@@ -233,22 +233,28 @@ def write_html(report, path):
         color = risk_colors.get(f['severity'], '#999')
         rows += f"""
         <tr>
-            <td><span style="background:{color};color:white;padding:2px 8px;border-radius:4px;font-weight:bold">{f['severity']}</span></td>
+            <td><span style="background:{color};color:white;padding:2px 8px;border-radius:8px;font-weight:bold">{f['severity']}</span></td>
             <td style="font-weight:bold">{f['score']}/10</td>
             <td>{f['finding_type']}</td>
             <td>{f.get('username', '')}</td>
             <td style="font-size:0.85em">{f.get('detail', '')}</td>
-            <td style="font-size:0.85em;color:#28a745">{f.get('recommendation', '')}</td>
+            <td style="font-size:0.85em;color:#555">{f.get('recommendation', '')}</td>
         </tr>"""
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Linux User Audit Report</title>
+<title>User Security Audit Report</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
-  .header {{ background: linear-gradient(135deg, #2c3e50, #dc3545); color: white; padding: 30px 40px; }}
+  /* === BRAND TOKENS — DO NOT CHANGE INDEPENDENTLY ===
+     brand-dark:   #1a1a2e  (headers, th, dark chrome)
+     body-text:    #333     (paragraph text)
+     body-bg:      #f5f6fa  (page background)
+     badge-radius: 8px
+     ================================================ */
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #333; }}
+  .header {{ background: #1a1a2e; color: white; padding: 30px 40px; }}
   .header h1 {{ margin: 0; font-size: 1.8em; }}
   .header p {{ margin: 5px 0 0; opacity: 0.8; }}
   .summary {{ display: flex; gap: 20px; padding: 20px 40px; flex-wrap: wrap; }}
@@ -260,7 +266,7 @@ def write_html(report, path):
   .total .num {{ color: #3498db; }}
   .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}
   table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
-  th {{ background: #2c3e50; color: white; padding: 12px 15px; text-align: left; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }}
+  th {{ background: #1a1a2e; color: white; padding: 12px 15px; text-align: left; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }}
   td {{ padding: 10px 15px; border-bottom: 1px solid #ecf0f1; vertical-align: top; }}
   tr:last-child td {{ border-bottom: none; }}
   tr:hover td {{ background: #f8f9ff; }}
@@ -269,7 +275,7 @@ def write_html(report, path):
 </head>
 <body>
 <div class="header">
-  <h1>Linux User Audit Report</h1>
+  <h1>User Security Audit Report</h1>
   <p>Generated: {generated} &nbsp;|&nbsp; Host: {hostname} &nbsp;|&nbsp; {summary['total_findings']} findings</p>
 </div>
 <div class="summary">

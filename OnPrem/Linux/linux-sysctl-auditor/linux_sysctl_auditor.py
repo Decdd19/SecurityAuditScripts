@@ -226,19 +226,19 @@ def write_html(report, path):
 
     rows = ''
     for r in findings:
-        color = _row_color(r)
+        badge_color = '#95a5a6' if r['compliant'] is None else ('#28a745' if r['compliant'] else '#dc3545')
         compliant_label = 'SKIP' if r['compliant'] is None else ('PASS' if r['compliant'] else 'FAIL')
         status_icon = '\u2139\ufe0f' if r['compliant'] is None else ('\u2705' if r['compliant'] else '\u274c')
         remediation = r.get('remediation') or ''
         rows += f"""
         <tr>
-            <td><span style="background:{color};color:white;padding:2px 8px;border-radius:4px;font-weight:bold">{status_icon} {compliant_label}</span></td>
+            <td><span style="background:{badge_color};color:white;padding:2px 8px;border-radius:4px;font-weight:bold">{status_icon} {compliant_label}</span></td>
             <td><span style="background:{severity_colors.get(r['severity_if_wrong'], '#999')};color:white;padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:bold">{r['severity_if_wrong']}</span></td>
             <td style="font-family:monospace;font-size:0.85em">{r['param']}</td>
             <td style="font-family:monospace">{r['expected']}</td>
             <td style="font-family:monospace">{r['actual']}</td>
             <td style="font-size:0.85em">{r['description']}</td>
-            <td style="font-size:0.8em;color:#28a745">{remediation}</td>
+            <td style="font-size:0.8em;color:#555">{remediation}</td>
         </tr>"""
 
     risk_color = severity_colors.get(summary['overall_risk'], '#28a745')
@@ -247,10 +247,16 @@ def write_html(report, path):
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Linux Sysctl Hardening Audit Report</title>
+<title>Kernel Security Audit Report</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
-  .header {{ background: linear-gradient(135deg, #2c3e50, #28a745); color: white; padding: 30px 40px; }}
+  /* === BRAND TOKENS — DO NOT CHANGE INDEPENDENTLY ===
+     brand-dark:   #1a1a2e  (headers, th, dark chrome)
+     body-text:    #333     (paragraph text)
+     body-bg:      #f5f6fa  (page background)
+     badge-radius: 8px
+     ================================================ */
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #333; }}
+  .header {{ background: #1a1a2e; color: white; padding: 30px 40px; }}
   .header h1 {{ margin: 0; font-size: 1.8em; }}
   .header p {{ margin: 5px 0 0; opacity: 0.8; }}
   .summary {{ display: flex; gap: 20px; padding: 20px 40px; flex-wrap: wrap; }}
@@ -263,10 +269,10 @@ def write_html(report, path):
   .medium .num {{ color: #ffc107; }}
   .low .num {{ color: #28a745; }}
   .total .num {{ color: #3498db; }}
-  .risk-badge {{ display: inline-block; background: {risk_color}; color: white; border-radius: 6px; padding: 4px 14px; font-weight: bold; font-size: 1.1em; }}
+  .risk-badge {{ display: inline-block; background: {risk_color}; color: white; border-radius: 8px; padding: 4px 14px; font-weight: bold; font-size: 1.1em; }}
   .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}
   table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
-  th {{ background: #2c3e50; color: white; padding: 12px 15px; text-align: left; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }}
+  th {{ background: #1a1a2e; color: white; padding: 12px 15px; text-align: left; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }}
   td {{ padding: 10px 15px; border-bottom: 1px solid #ecf0f1; vertical-align: top; }}
   tr:last-child td {{ border-bottom: none; }}
   tr:hover td {{ background: #f8f9ff; }}
@@ -275,7 +281,7 @@ def write_html(report, path):
 </head>
 <body>
 <div class="header">
-  <h1>&#x2699;&#xFE0F; Linux Sysctl Hardening Audit Report</h1>
+  <h1>Kernel Security Audit Report</h1>
   <p>Generated: {generated} &nbsp;|&nbsp; Host: {hostname} &nbsp;|&nbsp; {summary['total_checks']} checks &nbsp;|&nbsp; Risk: <span class="risk-badge">{summary['overall_risk']}</span></p>
 </div>
 <div class="summary">

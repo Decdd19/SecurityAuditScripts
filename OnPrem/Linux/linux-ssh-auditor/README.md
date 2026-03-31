@@ -7,21 +7,18 @@ Checks SSH daemon configuration hardening by reading the effective running confi
 ## ⚙️ Requirements
 
 - Python 3.7+
-- Run as root (`sudo`) — `sshd -T` may require elevated privileges on some distributions
+- `sshd -T` requires root on most distributions — run with `sudo` to get full results. Without it all 21 checks return N/A and are excluded from scoring; the report will display a note explaining how many checks were skipped.
 
 ---
 
 ## 🚀 Usage
 
 ```bash
-# Full audit — writes ssh_report.json, .csv, .html
-sudo python3 linux_ssh_auditor.py
-
-# HTML report only
-sudo python3 linux_ssh_auditor.py --format html --output ssh_report
-
-# All formats
+# Full audit with sudo (recommended — enables sshd -T config dump)
 sudo python3 linux_ssh_auditor.py --format all
+
+# Without sudo — runs but all checks return N/A (sshd -T unavailable)
+python3 linux_ssh_auditor.py --format all
 ```
 
 ---

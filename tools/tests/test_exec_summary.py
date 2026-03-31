@@ -32,33 +32,7 @@ def test_load_report_returns_none_on_invalid_json(tmp_path):
 
 # ── discover_reports ───────────────────────────────────────────────────────────
 
-REPORT_PATTERNS = [
-    "s3_report.json",
-    "sg_report.json",
-    "cloudtrail_report.json",
-    "root_report.json",
-    "iam_report.json",
-    "ec2_report.json",
-    "rds_report.json",
-    "guardduty_report.json",
-    "vpcflowlogs_report.json",
-    "lambda_report.json",
-    "securityhub_report.json",
-    "keyvault_report.json",
-    "storage_report.json",
-    "nsg_report.json",
-    "activitylog_report.json",
-    "subscription_report.json",
-    "entra_report.json",
-    "ad_report.json",
-    "localuser_report.json",
-    "winfirewall_report.json",
-    "smbsigning_report.json",
-    "auditpolicy_report.json",
-    "bitlocker_report.json",
-    "user_report.json",
-    "fw_report.json",
-]
+REPORT_PATTERNS = es.KNOWN_PATTERNS
 
 
 def test_discover_reports_finds_known_patterns(tmp_path):
@@ -133,9 +107,12 @@ def test_compute_overall_score_no_findings():
 
 
 def test_compute_overall_score_all_critical():
-    # 3 CRITICALs × 8 pts = 24 deducted → score 76 (calibrated for SMB environments)
+    # 3 CRITICAL pillars × 8 pts each = 24 deducted → score 76, grade B
+    # Deductions are per-pillar, not per-finding (see compute_overall_score docstring)
     pillar_stats = [
-        {"critical": 3, "high": 0, "medium": 0, "low": 0, "total": 3, "pillar_risk": "CRITICAL"},
+        {"critical": 1, "high": 0, "medium": 0, "low": 0, "total": 1, "pillar_risk": "CRITICAL"},
+        {"critical": 1, "high": 0, "medium": 0, "low": 0, "total": 1, "pillar_risk": "CRITICAL"},
+        {"critical": 1, "high": 0, "medium": 0, "low": 0, "total": 1, "pillar_risk": "CRITICAL"},
     ]
     score, grade = es.compute_overall_score(pillar_stats)
     assert score == 76.0
@@ -143,9 +120,11 @@ def test_compute_overall_score_all_critical():
 
 
 def test_compute_overall_score_severe_is_f():
-    # 13 CRITICALs × 8 = 104 → clamped to 0 → F
+    # 13 CRITICAL pillars × 8 pts each = 104 → clamped to 0 → F
+    # Deductions are per-pillar, not per-finding (see compute_overall_score docstring)
     pillar_stats = [
-        {"critical": 13, "high": 0, "medium": 0, "low": 0, "total": 13, "pillar_risk": "CRITICAL"},
+        {"critical": 1, "high": 0, "medium": 0, "low": 0, "total": 1, "pillar_risk": "CRITICAL"}
+        for _ in range(13)
     ]
     score, grade = es.compute_overall_score(pillar_stats)
     assert score == 0

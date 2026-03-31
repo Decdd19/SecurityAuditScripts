@@ -7,13 +7,13 @@ Aggregates JSON report files from all AWS, Azure, and on-premises auditors into 
 ## ✨ Features
 
 - Auto-discovers all `*_report.json` files in a target directory
-- Supports all 21 auditor report types across AWS, Azure, and on-premises
+- Supports 30+ auditor report types across AWS, Azure, M365, Linux, Windows, Email, and Network
 - Per-pillar risk summary cards (CRITICAL / HIGH / MEDIUM / LOW counts)
-- Overall security score (0–100) with letter grade (A–F)
-- Top 10 findings sorted by severity score
+- Overall security score (0–100) with letter grade (A–F) and grade hard-caps
+- Top 10 critical/high findings sorted by severity, with resource identifier and remediation
 - Quick wins table — low-effort, high-impact actions from ℹ️-prefixed flags on HIGH/CRITICAL findings
 - Output written to a single HTML file (mode 600)
-- Score calibrated for SMB environments: 13 CRITICAL findings = score 0
+- Score calibrated for SMB environments: 13 CRITICAL pillars = score 0
 
 ---
 
@@ -41,22 +41,30 @@ python3 tools/exec_summary.py --input-dir . --output /tmp/my_summary.html
 
 ## 📊 Scoring Algorithm
 
-| Finding Level | Deduction per finding |
-|--------------|----------------------|
-| CRITICAL | −8 points |
-| HIGH | −4 points |
-| MEDIUM | −2 points |
-| LOW | −0.5 points |
+Deductions are **per pillar** (not per finding) to avoid inflating the penalty for auditors that emit many findings per service:
 
-Starting from 100, score is clamped to [0, 100].
+| Pillar Risk Level | Deduction |
+|------------------|-----------|
+| CRITICAL pillar | −8 points |
+| HIGH pillar | −3 points |
+| MEDIUM pillar | −1 point |
+| LOW pillar | 0 points |
+
+Starting from 100, score is clamped to [0, 100]. A typical first-time SMB assessment with 5–8 CRITICAL pillars scores 36–60.
 
 | Score | Grade | Interpretation |
 |-------|-------|---------------|
-| 90–100 | A | Strong posture, minor gaps only |
-| 80–89 | B | Good posture with some issues to address |
-| 70–79 | C | Notable gaps requiring attention |
-| 60–69 | D | Significant security debt |
-| 0–59 | F | Critical issues requiring immediate action |
+| ≥ 85 | A | Strong posture, minor gaps only |
+| ≥ 70 | B | Good posture with some issues to address |
+| ≥ 55 | C | Notable gaps requiring attention |
+| ≥ 40 | D | Significant security debt |
+| < 40 | F | Critical issues requiring immediate action |
+
+### Grade hard-caps
+
+- Any CRITICAL pillar present → grade capped at B
+- 2+ CRITICAL pillars → grade capped at C
+- Firewall pillar CRITICAL (no firewall detected) → grade floored at D
 
 ---
 
@@ -64,13 +72,19 @@ Starting from 100, score is clamped to [0, 100].
 
 The tool auto-discovers any of these filenames in the input directory:
 
-**AWS:** `s3_report.json`, `sg_report.json`, `cloudtrail_report.json`, `root_report.json`, `iam_report.json`, `ec2_report.json`, `rds_report.json`, `guardduty_report.json`, `vpcflowlogs_report.json`, `lambda_report.json`
+**AWS (13):** `s3_report.json`, `sg_report.json`, `cloudtrail_report.json`, `root_report.json`, `iam_report.json`, `ec2_report.json`, `rds_report.json`, `guardduty_report.json`, `vpcflowlogs_report.json`, `lambda_report.json`, `securityhub_report.json`, `kms_report.json`, `elb_report.json`
 
-**Azure:** `keyvault_report.json`, `storage_report.json`, `nsg_report.json`, `activitylog_report.json`, `subscription_report.json`, `entra_report.json`
+**Azure (7):** `keyvault_report.json`, `storage_report.json`, `nsg_report.json`, `activitylog_report.json`, `subscription_report.json`, `entra_report.json`, `defender_report.json`
 
-**On-Premises (Windows):** `ad_report.json`, `localuser_report.json`, `winfirewall_report.json`
+**M365:** `m365_report.json`
 
-**On-Premises (Linux):** `user_report.json`, `fw_report.json`
+**On-Premises — Windows (6):** `ad_report.json`, `localuser_report.json`, `winfirewall_report.json`, `smbsigning_report.json`, `auditpolicy_report.json`, `bitlocker_report.json`
+
+**On-Premises — Linux (5):** `user_report.json`, `fw_report.json`, `sysctl_report.json`, `patch_report.json`, `ssh_report.json`
+
+**Email:** `email_report.json`
+
+**Network:** `ssl_report.json`, `http_headers_report.json`
 
 ---
 

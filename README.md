@@ -297,7 +297,7 @@ Connect-ExchangeOnline -UserPrincipalName admin@contoso.com
 
 **Linux scripts:**
 - Python 3.7+
-- Run as root (`sudo`) for shadow file and firewall access
+- Most auditors run without `sudo`. The SSH auditor requires `sudo` to invoke `sshd -T`; without it all SSH checks return N/A.
 
 ---
 
@@ -349,8 +349,14 @@ cd SecurityAuditScripts
 ```bash
 git clone https://github.com/Decdd19/SecurityAuditScripts.git
 cd SecurityAuditScripts
-sudo python3 OnPrem/Linux/linux-user-auditor/linux_user_auditor.py --format html
-sudo python3 OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py --format all
+
+# All auditors except SSH run without sudo
+python3 OnPrem/Linux/linux-user-auditor/linux_user_auditor.py --format html
+python3 OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py --format all
+python3 OnPrem/Linux/linux-sysctl-auditor/linux_sysctl_auditor.py --format all
+python3 OnPrem/Linux/linux-patch-auditor/linux_patch_auditor.py --format all
+
+# SSH auditor requires sudo for sshd -T (returns N/A for all checks without it)
 sudo python3 OnPrem/Linux/linux-ssh-auditor/linux_ssh_auditor.py --format html
 ```
 

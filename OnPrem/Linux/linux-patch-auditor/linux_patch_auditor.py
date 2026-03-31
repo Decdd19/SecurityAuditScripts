@@ -443,10 +443,16 @@ def write_html(report, path):
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Linux Patch Auditor Report</title>
+<title>Patch Security Audit Report</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
-  .header {{ background: linear-gradient(135deg, #2c3e50, #e74c3c); color: white; padding: 30px 40px; }}
+  /* === BRAND TOKENS — DO NOT CHANGE INDEPENDENTLY ===
+     brand-dark:   #1a1a2e  (headers, th, dark chrome)
+     body-text:    #333     (paragraph text)
+     body-bg:      #f5f6fa  (page background)
+     badge-radius: 8px
+     ================================================ */
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #333; }}
+  .header {{ background: #1a1a2e; color: white; padding: 30px 40px; }}
   .header h1 {{ margin: 0; font-size: 1.8em; }}
   .header p {{ margin: 5px 0 0; opacity: 0.8; }}
   .summary {{ display: flex; gap: 20px; padding: 20px 40px; flex-wrap: wrap; }}
@@ -456,18 +462,19 @@ def write_html(report, path):
   .risk .num {{ color: {risk_color}; }}
   .detail-wrap {{ padding: 0 40px 20px; }}
   .detail-card {{ background: white; border-radius: 8px; padding: 20px 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }}
-  .detail-card h2 {{ margin-top: 0; font-size: 1.1em; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; }}
+  .detail-card h2 {{ margin-top: 0; font-size: 1.1em; color: #333; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; }}
   table.info {{ width: 100%; border-collapse: collapse; }}
   table.info td {{ padding: 8px 12px; border-bottom: 1px solid #ecf0f1; }}
   table.info td:first-child {{ font-weight: bold; color: #555; width: 200px; }}
   table.info tr:last-child td {{ border-bottom: none; }}
   ul.flags {{ margin: 0; padding-left: 20px; }}
+  th {{ background: #1a1a2e; color: white; padding: 12px 15px; text-align: left; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }}
   .footer {{ text-align: center; padding: 20px; color: #999; font-size: 0.85em; }}
 </style>
 </head>
 <body>
 <div class="header">
-  <h1>🩹 Linux Patch Auditor Report</h1>
+  <h1>Patch Security Audit Report</h1>
   <p>Generated: {generated} &nbsp;|&nbsp; Host: {hostname} &nbsp;|&nbsp; Kernel: {kernel}</p>
 </div>
 <div class="summary">
