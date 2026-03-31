@@ -347,7 +347,7 @@ def test_write_html_contains_title(tmp_path):
         lsa.write_html(report, path)
     with open(path) as f:
         content = f.read()
-    assert 'Linux Sysctl Hardening Audit Report' in content
+    assert 'Kernel Security Audit Report' in content
 
 
 def test_write_html_contains_green_gradient(tmp_path):

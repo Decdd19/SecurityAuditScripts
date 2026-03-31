@@ -560,7 +560,7 @@ def test_write_html_contains_title(tmp_path):
         lpa.write_html(report, path)
     with open(path) as f:
         content = f.read()
-    assert 'Linux Patch Auditor Report' in content
+    assert 'Patch Security Audit Report' in content
     assert 'myhost' in content
 
 

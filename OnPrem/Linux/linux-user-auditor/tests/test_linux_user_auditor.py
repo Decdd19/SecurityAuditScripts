@@ -668,7 +668,7 @@ def test_write_html_contains_title(tmp_path):
         lua.write_html(report, path)
     with open(path) as f:
         content = f.read()
-    assert 'Linux User Audit Report' in content
+    assert 'User Security Audit Report' in content
 
 
 # ── read_file / run_command / get_file_stat wrappers ──────────────────────────
