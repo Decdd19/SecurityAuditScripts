@@ -33,10 +33,11 @@ def validate_finding(finding: dict) -> dict:
 
     Raises ValueError if neither risk_level nor severity is present.
     """
-    # risk_level ← severity
+    # risk_level ← severity (case-insensitive alias for PowerShell auditor compat)
     if "risk_level" not in finding:
-        if "severity" in finding:
-            finding["risk_level"] = finding["severity"]
+        sev_key = next((k for k in finding if k.lower() == "severity"), None)
+        if sev_key:
+            finding["risk_level"] = finding[sev_key]
         else:
             raise ValueError(
                 f"Finding missing both 'risk_level' and 'severity': {finding.get('finding_type', finding)}"

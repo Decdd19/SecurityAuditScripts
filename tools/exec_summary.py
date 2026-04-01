@@ -139,11 +139,17 @@ RISK_COLOURS = {
 
 def load_report(path):
     """Load a JSON report file. Returns dict or None on error."""
-    try:
-        with open(path) as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return None
+    # Try UTF-8-SIG first (handles PowerShell UTF-8 BOM and plain UTF-8),
+    # then UTF-16 (PowerShell Out-File default on Windows PS5), then cp1252.
+    for enc in ("utf-8-sig", "utf-16", "cp1252"):
+        try:
+            with open(path, encoding=enc) as f:
+                return json.load(f)
+        except (UnicodeDecodeError, UnicodeError):
+            continue
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return None
+    return None
 
 
 def discover_reports(directory):
@@ -641,9 +647,12 @@ function applyFilter(f) {{
 </body>
 </html>"""
 
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write(html_content)
-    os.chmod(path, 0o600)
+    try:
+        os.chmod(path, 0o600)
+    except (AttributeError, NotImplementedError):
+        pass
     log.info(f"Executive summary written: {path}")
 
 
