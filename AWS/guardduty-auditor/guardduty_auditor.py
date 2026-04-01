@@ -32,6 +32,11 @@ from datetime import datetime, timezone
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from report_utils import get_styles
+
 BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -399,31 +404,24 @@ def write_html(report, path):
     disabled = summary.get("disabled_regions", 0)
     disabled_names = ", ".join(summary.get("disabled_region_names", [])) or "None"
 
+    extra_css = (
+        "  .stat { background: white; border-radius: 8px; padding: 15px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); min-width: 120px; text-align: center; }\n"
+        "  .stat .value { font-size: 2em; font-weight: bold; }\n"
+        "  .stat .label { font-size: 0.85em; color: #666; margin-top: 4px; }\n"
+        "  .section { margin: 0 40px 30px; }\n"
+        "  .section h2 { font-size: 1.1em; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; }\n"
+        "  .flag-item { margin-bottom: 4px; }\n"
+        "  .flag-text { display: block; font-weight: 500; }\n"
+        "  .rem-text { display: block; color: #666; font-size: 0.85em; padding-left: 8px; }\n"
+        "  .disabled-banner { margin: 0 40px 20px; padding: 12px 20px; background: #fdf3e3; border-left: 4px solid #fd7e14; border-radius: 4px; font-size: 0.9em; }\n"
+    )
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>GuardDuty Audit Report</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
-  .header {{ background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 30px 40px; }}
-  .header h1 {{ margin: 0; font-size: 1.8em; }}
-  .header p {{ margin: 5px 0 0; opacity: 0.8; }}
-  .summary {{ display: flex; gap: 20px; padding: 20px 40px; flex-wrap: wrap; }}
-  .stat {{ background: white; border-radius: 8px; padding: 15px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); min-width: 120px; text-align: center; }}
-  .stat .value {{ font-size: 2em; font-weight: bold; }}
-  .stat .label {{ font-size: 0.85em; color: #666; margin-top: 4px; }}
-  .section {{ margin: 0 40px 30px; }}
-  .section h2 {{ font-size: 1.1em; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; }}
-  table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }}
-  th {{ background: #2c3e50; color: white; padding: 10px 12px; text-align: left; font-size: 0.85em; }}
-  td {{ padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; font-size: 0.9em; }}
-  tr:last-child td {{ border-bottom: none; }}
-  tr:hover td {{ background: #f8f9fa; }}
-  .flag-item {{ margin-bottom: 4px; }}
-  .flag-text {{ display: block; font-weight: 500; }}
-  .rem-text {{ display: block; color: #666; font-size: 0.85em; padding-left: 8px; }}
-  .disabled-banner {{ margin: 0 40px 20px; padding: 12px 20px; background: #fdf3e3; border-left: 4px solid #fd7e14; border-radius: 4px; font-size: 0.9em; }}
+{get_styles(extra_css)}
 </style>
 </head>
 <body>

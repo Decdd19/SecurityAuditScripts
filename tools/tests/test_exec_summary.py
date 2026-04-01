@@ -101,22 +101,22 @@ def test_compute_pillar_stats_all_low():
 # ── compute_overall_score ──────────────────────────────────────────────────────
 
 def test_compute_overall_score_no_findings():
-    score, grade = es.compute_overall_score([])
+    score, grade, _ = es.compute_overall_score([])
     assert score == 100
     assert grade == "A"
 
 
 def test_compute_overall_score_all_critical():
-    # 3 CRITICAL pillars × 8 pts each = 24 deducted → score 76, grade B
-    # Deductions are per-pillar, not per-finding (see compute_overall_score docstring)
+    # 3 CRITICAL pillars × 8 pts each = 24 deducted → score 76
+    # C-cap fires (2+ CRITICAL pillars → grade ≤ C) so grade = C despite 76 pts
     pillar_stats = [
         {"critical": 1, "high": 0, "medium": 0, "low": 0, "total": 1, "pillar_risk": "CRITICAL"},
         {"critical": 1, "high": 0, "medium": 0, "low": 0, "total": 1, "pillar_risk": "CRITICAL"},
         {"critical": 1, "high": 0, "medium": 0, "low": 0, "total": 1, "pillar_risk": "CRITICAL"},
     ]
-    score, grade = es.compute_overall_score(pillar_stats)
+    score, grade, _ = es.compute_overall_score(pillar_stats)
     assert score == 76.0
-    assert grade == "B"
+    assert grade == "C"
 
 
 def test_compute_overall_score_severe_is_f():
@@ -126,7 +126,7 @@ def test_compute_overall_score_severe_is_f():
         {"critical": 1, "high": 0, "medium": 0, "low": 0, "total": 1, "pillar_risk": "CRITICAL"}
         for _ in range(13)
     ]
-    score, grade = es.compute_overall_score(pillar_stats)
+    score, grade, _ = es.compute_overall_score(pillar_stats)
     assert score == 0
     assert grade == "F"
 
@@ -136,7 +136,7 @@ def test_compute_overall_score_mixed():
         {"critical": 1, "high": 2, "medium": 3, "low": 10, "total": 16, "pillar_risk": "CRITICAL"},
         {"critical": 0, "high": 0, "medium": 1, "low": 5, "total": 6, "pillar_risk": "MEDIUM"},
     ]
-    score, grade = es.compute_overall_score(pillar_stats)
+    score, grade, _ = es.compute_overall_score(pillar_stats)
     assert 0 <= score <= 100
 
 
@@ -144,7 +144,7 @@ def test_compute_overall_score_grade_a():
     pillar_stats = [
         {"critical": 0, "high": 0, "medium": 0, "low": 2, "total": 2, "pillar_risk": "LOW"},
     ]
-    score, grade = es.compute_overall_score(pillar_stats)
+    score, grade, _ = es.compute_overall_score(pillar_stats)
     assert grade == "A"
     assert score >= 85
 

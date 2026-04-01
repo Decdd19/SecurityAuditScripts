@@ -481,20 +481,21 @@ function ConvertTo-M365HtmlReport {
 <head><meta charset="UTF-8"><title>M365 Security Audit</title>
 <style>
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:#f5f6fa;color:#333}
-  .header{background:linear-gradient(135deg,#0078d4,#004578);color:#fff;padding:32px;text-align:center}
+  .header{background:#1a1a2e;color:#fff;padding:30px 40px}
   .header h1{margin:0;font-size:1.8em}
+  .header p{margin:5px 0 0;opacity:0.8}
   .section{padding:20px 32px}
   .section h2{font-size:1.1em;color:#333;border-bottom:2px solid #e0e0e0;padding-bottom:8px}
-  table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-  th{background:#004578;color:#fff;padding:10px 14px;text-align:left;font-size:0.85em}
-  td{padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:top;font-size:0.88em}
-  .footer{text-align:center;padding:16px;color:#999;font-size:0.82em}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+  th{background:#1a1a2e;color:#fff;padding:12px 15px;text-align:left;font-size:0.85em;text-transform:uppercase;letter-spacing:0.5px}
+  td{padding:10px 15px;border-bottom:1px solid #ecf0f1;vertical-align:top}tr:last-child td{border-bottom:none}tr:hover td{background:#f8f9ff}
+  .footer{text-align:center;padding:20px;color:#999;font-size:0.85em}
 </style>
 </head>
 <body>
 <div class="header">
   <h1>M365 / Exchange Online Security Audit</h1>
-  <p style="color:#cce4f7;margin:6px 0 0">Tenant: $tenantDisplay &nbsp;|&nbsp; Generated: $ts</p>
+  <p>Tenant: $tenantDisplay &nbsp;|&nbsp; Generated: $ts</p>
 </div>
 <div class="section">
   <h2>Findings</h2>

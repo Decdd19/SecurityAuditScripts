@@ -30,6 +30,11 @@ from datetime import datetime, timezone
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from report_utils import get_styles
+
 BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -456,33 +461,27 @@ def write_html(report, path):
     org_id_escaped = html.escape(str(f["org_id"])) if f["org_id"] else ""
     support_plan_escaped = html.escape(str(f["support_plan"]))
 
+    extra_css = (
+        f"  .risk-badge {{ display: inline-block; background: {color}; color: white; padding: 6px 18px; border-radius: 20px; font-weight: bold; font-size: 1.2em; margin-bottom: 10px; }}\n"
+        f"  .score {{ font-size: 3em; font-weight: bold; color: {color}; }}\n"
+        "  .content { padding: 30px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }\n"
+        "  .card h2 { margin: 0 0 15px; font-size: 1em; text-transform: uppercase; letter-spacing: 0.5px; color: #666; }\n"
+        "  ul { margin: 0; padding-left: 20px; line-height: 1.9; }\n"
+        "  .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1; }\n"
+        "  .metric:last-child { border-bottom: none; }\n"
+        "  .metric .label { color: #666; }\n"
+        "  .metric .value { font-weight: bold; }\n"
+        "  .flag-item { margin-bottom: 6px; }\n"
+        "  .flag-text { display: block; }\n"
+        "  .rem-text { display: block; font-size: 0.78em; color: #555; padding-left: 12px; font-style: italic; }\n"
+    )
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Root Account Audit Report</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
-  .header {{ background: linear-gradient(135deg, #2c3e50, #dc3545); color: white; padding: 30px 40px; }}
-  .header h1 {{ margin: 0; font-size: 1.8em; }}
-  .header p {{ margin: 5px 0 0; opacity: 0.8; }}
-  .content {{ padding: 30px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
-  .card {{ background: white; border-radius: 8px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
-  .card h2 {{ margin: 0 0 15px; font-size: 1em; text-transform: uppercase; letter-spacing: 0.5px; color: #666; }}
-  .risk-badge {{ display: inline-block; background: {color}; color: white; padding: 6px 18px; border-radius: 20px; font-weight: bold; font-size: 1.2em; margin-bottom: 10px; }}
-  .score {{ font-size: 3em; font-weight: bold; color: {color}; }}
-  ul {{ margin: 0; padding-left: 20px; line-height: 1.9; }}
-  table {{ width: 100%; border-collapse: collapse; }}
-  td {{ padding: 8px 10px; border-bottom: 1px solid #ecf0f1; }}
-  tr:last-child td {{ border-bottom: none; }}
-  .metric {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1; }}
-  .metric:last-child {{ border-bottom: none; }}
-  .metric .label {{ color: #666; }}
-  .metric .value {{ font-weight: bold; }}
-  .footer {{ text-align: center; padding: 20px; color: #999; font-size: 0.85em; }}
-  .flag-item {{ margin-bottom: 6px; }}
-  .flag-text {{ display: block; }}
-  .rem-text {{ display: block; font-size: 0.78em; color: #555; padding-left: 12px; font-style: italic; }}
+{get_styles(extra_css)}
 </style>
 </head>
 <body>

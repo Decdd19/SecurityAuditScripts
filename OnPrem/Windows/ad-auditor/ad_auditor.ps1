@@ -114,17 +114,23 @@ function ConvertTo-HtmlReport {
 <!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'>
 <title>Active Directory Audit Report</title>
 <style>
-  body{font-family:Arial,sans-serif;margin:20px;background:#f5f5f5}
-  h1{color:#333}.summary{display:flex;gap:16px;margin-bottom:24px}
-  .card{background:#fff;border-radius:6px;padding:16px 24px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:120px;text-align:center}
-  .card .num{font-size:2em;font-weight:bold}.card .lbl{color:#666;font-size:.85em}
-  table{width:100%;border-collapse:collapse;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.1)}
-  th{background:#343a40;color:#fff;padding:10px;text-align:left}
-  td{padding:8px 10px;border-bottom:1px solid #dee2e6}tr:hover{background:#f1f3f5}
-  .meta{color:#666;font-size:.85em;margin-bottom:16px}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:#f5f6fa;color:#333}
+  .header{background:#1a1a2e;color:#fff;padding:30px 40px}
+  .header h1{margin:0;font-size:1.8em}
+  .header p{margin:5px 0 0;opacity:0.8}
+  .summary{display:flex;gap:20px;padding:20px 40px;flex-wrap:wrap}
+  .card{background:#fff;border-radius:8px;padding:20px 30px;flex:1;min-width:140px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center}
+  .card .num{font-size:2.5em;font-weight:bold}.card .lbl{color:#666;font-size:.85em;margin-top:4px}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+  th{background:#1a1a2e;color:#fff;padding:12px 15px;text-align:left;font-size:0.85em;text-transform:uppercase;letter-spacing:0.5px}
+  td{padding:10px 15px;border-bottom:1px solid #ecf0f1;vertical-align:top}tr:last-child td{border-bottom:none}tr:hover td{background:#f8f9ff}
+  code{background:#ecf0f1;padding:2px 5px;border-radius:3px;font-size:0.85em}
+  .footer{text-align:center;padding:20px;color:#999;font-size:0.85em}
 </style></head><body>
+<div class='header'>
 <h1>Active Directory Audit Report</h1>
-<p class='meta'>Domain: $DomainName &nbsp;|&nbsp; Generated: $ScannedAt</p>
+<p>Domain: $DomainName &nbsp;|&nbsp; Generated: $ScannedAt</p>
+</div>
 <div class='summary'>
   <div class='card'><div class='num'>$($Findings.Count)</div><div class='lbl'>Total Findings</div></div>
   <div class='card'><div class='num' style='color:#dc3545'>$($counts.CRITICAL)</div><div class='lbl'>CRITICAL</div></div>

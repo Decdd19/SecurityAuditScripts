@@ -29,6 +29,11 @@ from datetime import datetime, timezone
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from report_utils import get_styles
+
 BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -408,33 +413,26 @@ def write_html(report, path):
             f'</tr>\n'
         )
 
+    extra_css = (
+        "  .summary { background: white; border-bottom: 1px solid #e0e0e0; }\n"
+        "  .card { border-left: 4px solid #ccc; padding: 12px 20px; min-width: 120px; background: transparent; box-shadow: none; }\n"
+        "  .card .num { font-size: 2em; font-weight: 700; }\n"
+        "  .card .label { font-size: 0.8em; color: #666; text-transform: uppercase; }\n"
+        "  .card.critical { border-left-color: #dc3545; } .card.critical .num { color: #dc3545; }\n"
+        "  .card.high { border-left-color: #fd7e14; } .card.high .num { color: #fd7e14; }\n"
+        "  .card.medium { border-left-color: #ffc107; } .card.medium .num { color: #856404; }\n"
+        "  .card.low { border-left-color: #28a745; } .card.low .num { color: #28a745; }\n"
+        "  .flag-item { margin-bottom: 6px; }\n"
+        "  .flag-text { display: block; font-size: 0.85em; }\n"
+        "  .rem-text { display: block; font-size: 0.78em; color: #555; padding-left: 12px; font-style: italic; }\n"
+    )
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Load Balancer Audit Report</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
-  .header {{ background: linear-gradient(135deg, #232f3e, #ff9900); color: white; padding: 30px 40px; }}
-  .header h1 {{ margin: 0; font-size: 1.8em; }}
-  .header p {{ margin: 5px 0 0; opacity: 0.8; }}
-  .summary {{ display: flex; gap: 20px; padding: 20px 40px; flex-wrap: wrap; background: white; border-bottom: 1px solid #e0e0e0; }}
-  .card {{ border-left: 4px solid #ccc; padding: 12px 20px; min-width: 120px; }}
-  .card .num {{ font-size: 2em; font-weight: 700; }}
-  .card .label {{ font-size: 0.8em; color: #666; text-transform: uppercase; }}
-  .card.critical {{ border-left-color: #dc3545; }} .card.critical .num {{ color: #dc3545; }}
-  .card.high {{ border-left-color: #fd7e14; }} .card.high .num {{ color: #fd7e14; }}
-  .card.medium {{ border-left-color: #ffc107; }} .card.medium .num {{ color: #856404; }}
-  .card.low {{ border-left-color: #28a745; }} .card.low .num {{ color: #28a745; }}
-  .table-wrap {{ padding: 24px 40px 40px; overflow-x: auto; }}
-  table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06); }}
-  th {{ background: #232f3e; color: white; padding: 10px 14px; text-align: left; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }}
-  td {{ padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 0.88em; vertical-align: top; }}
-  tr:hover td {{ background: #fafbff; }}
-  .footer {{ text-align: center; padding: 20px; color: #999; font-size: 0.85em; }}
-  .flag-item {{ margin-bottom: 6px; }}
-  .flag-text {{ display: block; font-size: 0.85em; }}
-  .rem-text {{ display: block; font-size: 0.78em; color: #555; padding-left: 12px; font-style: italic; }}
+{get_styles(extra_css)}
 </style>
 </head>
 <body>

@@ -193,19 +193,18 @@ function ConvertTo-HtmlReport {
 <!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'>
 <title>Defender for Cloud Audit Report</title>
 <style>
-  body{font-family:Arial,sans-serif;margin:0;background:#f5f5f5}
-  .header{background:linear-gradient(135deg,#0078d4,#004578);color:#fff;padding:24px 32px}
-  .header h1{margin:0;font-size:1.6em}.header p{margin:4px 0 0;opacity:.85;font-size:.9em}
-  .content{padding:24px 32px}
-  .summary{display:flex;gap:16px;margin-bottom:24px}
-  .card{background:#fff;border-radius:6px;padding:16px 24px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:120px;text-align:center}
-  .card .num{font-size:2em;font-weight:bold}.card .lbl{color:#666;font-size:.85em}
-  table{width:100%;border-collapse:collapse;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-bottom:24px}
-  th{background:#343a40;color:#fff;padding:10px;text-align:left}
-  td{padding:8px 10px;border-bottom:1px solid #dee2e6}tr:hover{background:#f1f3f5}
-  .meta{color:#666;font-size:.85em;margin-bottom:16px}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:#f5f6fa;color:#333}
+  .header{background:#1a1a2e;color:#fff;padding:30px 40px}
+  .header h1{margin:0;font-size:1.8em}.header p{margin:5px 0 0;opacity:0.8}
+  .content{padding:24px 40px}
+  .summary{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:24px}
+  .card{background:#fff;border-radius:8px;padding:20px 30px;box-shadow:0 2px 8px rgba(0,0,0,0.08);min-width:140px;text-align:center}
+  .card .num{font-size:2.5em;font-weight:bold}.card .lbl{color:#666;font-size:.85em;margin-top:4px}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:24px}
+  th{background:#1a1a2e;color:#fff;padding:12px 15px;text-align:left;font-size:0.85em;text-transform:uppercase;letter-spacing:0.5px}
+  td{padding:10px 15px;border-bottom:1px solid #ecf0f1;vertical-align:top}tr:last-child td{border-bottom:none}tr:hover td{background:#f8f9ff}
   .rem-text{display:block;font-size:.78em;color:#555;padding-left:12px;font-style:italic;margin-top:4px}
-  h2{color:#0078d4;margin-top:0}
+  .footer{text-align:center;padding:20px;color:#999;font-size:0.85em}
 </style></head><body>
 <div class='header'>
   <h1>&#128737; Microsoft Defender for Cloud Audit Report</h1>

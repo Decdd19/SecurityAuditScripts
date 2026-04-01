@@ -237,18 +237,25 @@ function ConvertTo-HtmlReport {
 <!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'>
 <title>Activity Log Audit Report</title>
 <style>
-  body{font-family:Arial,sans-serif;margin:20px;background:#f5f5f5}
-  h1{color:#333}.summary{display:flex;gap:16px;margin-bottom:24px}
-  .card{background:#fff;border-radius:6px;padding:16px 24px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:120px;text-align:center}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:#f5f6fa;color:#333}
+  .header{background:#1a1a2e;color:#fff;padding:30px 40px}
+  .header h1{margin:0;font-size:1.8em}
+  .header p{margin:5px 0 0;opacity:0.8}
+  .content{padding:24px 32px}
+  .summary{display:flex;gap:16px;margin-bottom:24px}
+  .card{background:#fff;border-radius:8px;padding:16px 24px;box-shadow:0 2px 8px rgba(0,0,0,0.08);min-width:120px;text-align:center}
   .card .num{font-size:2em;font-weight:bold}.card .lbl{color:#666;font-size:.85em}
-  table{width:100%;border-collapse:collapse;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.1)}
-  th{background:#343a40;color:#fff;padding:10px;text-align:left}
+  table{width:100%;border-collapse:collapse;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+  th{background:#1a1a2e;color:#fff;padding:10px;text-align:left}
   td{padding:8px 10px;border-bottom:1px solid #dee2e6}tr:hover{background:#f1f3f5}
   .meta{color:#666;font-size:.85em;margin-bottom:16px}
   .rem-text { display: block; font-size: 0.78em; color: #555; padding-left: 12px; font-style: italic; margin-top: 4px; }
 </style></head><body>
+<div class='header'>
 <h1>Activity Log Audit Report</h1>
-<p class='meta'>Tenant: $TenantId &nbsp;|&nbsp; Generated: $ScannedAt</p>
+<p>Tenant: $TenantId &nbsp;|&nbsp; Generated: $ScannedAt</p>
+</div>
+<div class='content'>
 <div class='summary'>
   <div class='card'><div class='num'>$($Findings.Count)</div><div class='lbl'>Total Findings</div></div>
   <div class='card'><div class='num' style='color:#dc3545'>$($counts.CRITICAL)</div><div class='lbl'>CRITICAL</div></div>
@@ -261,7 +268,8 @@ function ConvertTo-HtmlReport {
   <th>Severity</th><th>Recommendation</th>
 </tr></thead><tbody>
 $($rows -join "`n")
-</tbody></table></body></html>
+</tbody></table>
+</div></body></html>
 "@
 }
 

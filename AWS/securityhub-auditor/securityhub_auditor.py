@@ -28,6 +28,11 @@ from datetime import datetime, timezone
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from report_utils import get_styles
+
 BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -329,22 +334,17 @@ def write_html(report, path):
           <td style="font-size:0.85em">{flags_html}</td>
         </tr>"""
 
+    extra_css = (
+        "  h1 { color: #212529; font-size: 1.8em; margin: 20px 40px 10px; }\n"
+        "  .card .val { font-size: 2em; font-weight: bold; }\n"
+    )
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Security Hub Audit Report</title>
 <style>
-  body{{font-family:Arial,sans-serif;margin:24px;background:#f8f9fa}}
-  h1{{color:#212529}}
-  .summary{{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px}}
-  .card{{background:#fff;border-radius:8px;padding:16px 24px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:130px}}
-  .card .val{{font-size:2em;font-weight:bold}}
-  table{{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.1)}}
-  th{{background:#343a40;color:#fff;padding:10px 12px;text-align:left}}
-  td{{padding:8px 12px;border-bottom:1px solid #dee2e6;vertical-align:top}}
-  tr:last-child td{{border-bottom:none}}
-  .footer{{margin-top:16px;color:#6c757d;font-size:0.85em}}
+{get_styles(extra_css)}
 </style>
 </head>
 <body>

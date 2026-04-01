@@ -245,19 +245,20 @@ function Write-HtmlReport {
 <meta charset="UTF-8">
 <title>BitLocker Audit Report</title>
 <style>
-  body{font-family:Arial,sans-serif;margin:24px;background:#f8f9fa}
-  h1{color:#212529}
-  .cards{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px}
-  .card{background:#fff;border-radius:8px;padding:16px 24px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:130px;text-align:center}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:#f5f6fa;color:#333}
+  .header{background:#1a1a2e;color:#fff;padding:30px 40px}
+  .header h1{margin:0;font-size:1.8em}
+  .cards{display:flex;gap:16px;flex-wrap:wrap;padding:20px 40px}
+  .card{background:#fff;border-radius:8px;padding:16px 24px;box-shadow:0 2px 8px rgba(0,0,0,0.08);min-width:130px;text-align:center}
   .val{font-size:2em;font-weight:bold}
-  table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.1)}
-  th{background:#343a40;color:#fff;padding:10px 12px;text-align:left}
-  td{padding:8px 12px;border-bottom:1px solid #dee2e6;vertical-align:top}
-  .footer{margin-top:16px;color:#6c757d;font-size:0.85em}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+  th{background:#1a1a2e;color:#fff;padding:12px 15px;text-align:left;font-size:0.85em;text-transform:uppercase;letter-spacing:0.5px}
+  td{padding:10px 15px;border-bottom:1px solid #ecf0f1;vertical-align:top}tr:last-child td{border-bottom:none}tr:hover td{background:#f8f9ff}
+  .footer{text-align:center;padding:20px;color:#999;font-size:0.85em}
 </style>
 </head>
 <body>
-<h1>🔒 BitLocker Audit Report</h1>
+<div class='header'><h1>🔒 BitLocker Audit Report</h1></div>
 <div class="cards">
   <div class="card"><div class="val" style="color:$colour">$([System.Web.HttpUtility]::HtmlEncode($s.overall_risk))</div>Overall Risk</div>
   <div class="card"><div class="val">$($s.total_drives)</div>Drives</div>

@@ -26,6 +26,8 @@ import socket
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from report_utils import get_styles
 from typing import Optional
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -353,21 +355,7 @@ def write_html(report: dict, prefix: str) -> None:
 <meta charset="UTF-8">
 <title>HTTP Security Headers Audit \u2014 {html_lib.escape(domain)}</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f6fa; color: #2c3e50; }}
-  .header {{ background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 30px 40px; }}
-  .header h1 {{ margin: 0 0 8px; font-size: 1.8em; }}
-  .header p {{ margin: 0; opacity: 0.85; }}
-  .summary {{ display: flex; gap: 20px; padding: 20px 40px; flex-wrap: wrap; }}
-  .card {{ background: white; border-radius: 8px; padding: 20px 30px; flex: 1; min-width: 120px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
-  .card .num {{ font-size: 2.4em; font-weight: bold; }}
-  .card .label {{ color: #666; font-size: 0.88em; margin-top: 4px; }}
-  .table-wrap {{ padding: 0 40px 40px; overflow-x: auto; }}
-  table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
-  th {{ background: #1a1a2e; color: white; padding: 12px 15px; text-align: left; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }}
-  td {{ padding: 10px 15px; border-bottom: 1px solid #ecf0f1; vertical-align: top; }}
-  tr:last-child td {{ border-bottom: none; }}
-  tr:hover td {{ background: #f8f9ff; }}
-  .footer {{ text-align: center; padding: 20px; color: #999; font-size: 0.85em; }}
+{get_styles()}
 </style>
 </head>
 <body>

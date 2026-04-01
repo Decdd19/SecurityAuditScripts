@@ -80,7 +80,7 @@ def compute_overall_score(pillar_stats_list, modules_scanned=None):
 
     # c) D-floor: fw pillar CRITICAL (no firewall or default-allow policy) → grade ≤ D
     fw_critical = any(
-        s["pillar"] == "fw" and (s.get("critical", 0) > 0 or s.get("pillar_risk") == "CRITICAL")
+        s.get("pillar") == "fw" and (s.get("critical", 0) > 0 or s.get("pillar_risk") == "CRITICAL")
         for s in pillar_stats_list
     )
     if fw_critical and grade in ("A", "B", "C"):
