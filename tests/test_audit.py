@@ -105,10 +105,10 @@ class TestSelectAuditors(unittest.TestCase):
             self.assertIn(name, selected, f"Expected {name} in AWS selection")
         self.assertFalse(show_ps1)
 
-    def test_aws_selects_exactly_13(self):
+    def test_aws_selects_exactly_15(self):
         args = self._args("--aws")
         selected, _ = audit.select_auditors(args)
-        self.assertEqual(len(selected), 13)
+        self.assertEqual(len(selected), 15)
 
     def test_linux_selects_all_linux(self):
         args = self._args("--linux")
@@ -191,7 +191,7 @@ class TestAuditorMapCompleteness(unittest.TestCase):
     """Verify all expected auditors are registered in AUDITOR_MAP."""
 
     def test_aws_group_count(self):
-        self.assertEqual(len(audit.AWS_GROUP), 13)
+        self.assertEqual(len(audit.AWS_GROUP), 15)
 
     def test_aws_group_all_in_map(self):
         for name in audit.AWS_GROUP:
@@ -205,7 +205,7 @@ class TestAuditorMapCompleteness(unittest.TestCase):
             self.assertIn(name, audit.AUDITOR_MAP, f"{name} missing from AUDITOR_MAP")
 
     def test_windows_ps1_count(self):
-        self.assertEqual(len(audit.WINDOWS_PS1), 8)  # 7 Azure + m365
+        self.assertEqual(len(audit.WINDOWS_PS1), 11)  # 7 Azure + m365 + policy + azbackup + laps
 
     def test_specific_aws_auditors_present(self):
         expected = ["s3", "ec2", "sg", "cloudtrail", "rds", "iam",

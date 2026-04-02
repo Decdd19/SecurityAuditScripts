@@ -126,6 +126,8 @@ _MANUAL_AUDITOR_MAP: Dict[str, AuditorDef] = {
     "securityhub": AuditorDef(REPO_ROOT / "AWS/securityhub-auditor/securityhub_auditor.py", "securityhub_report", True),
     "kms":         AuditorDef(REPO_ROOT / "AWS/kms-auditor/kms_auditor.py",         "kms_report",         True),
     "elb":         AuditorDef(REPO_ROOT / "AWS/elb-auditor/elb_auditor.py",         "elb_report",         True),
+    "config":      AuditorDef(REPO_ROOT / "AWS/config-auditor/config_auditor.py",   "config_report",      True),
+    "backup":      AuditorDef(REPO_ROOT / "AWS/backup-auditor/backup_auditor.py",   "backup_report",      True),
     # ── Linux ─────────────────────────────────────────────────────────────────
     "linux_user":     AuditorDef(REPO_ROOT / "OnPrem/Linux/linux-user-auditor/linux_user_auditor.py",         "user_report",   False),
     "linux_firewall": AuditorDef(REPO_ROOT / "OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py", "fw_report",     False),
@@ -168,7 +170,7 @@ AUDITOR_MAP.update(_MANUAL_AUDITOR_MAP)
 AWS_GROUP: List[str] = [
     "s3", "ec2", "sg", "cloudtrail", "rds", "iam",
     "root", "guardduty", "vpcflowlogs", "lambda",
-    "securityhub", "kms", "elb",
+    "securityhub", "kms", "elb", "config", "backup",
 ]
 
 LINUX_GROUP: List[str] = [
@@ -185,6 +187,9 @@ WINDOWS_PS1: Dict[str, str] = {
     "entra":        "Azure/entra-auditor/entra_auditor.ps1",
     "defender":     "Azure/defender-auditor/defender_auditor.ps1",
     "m365":         "M365/m365-auditor/m365_auditor.ps1",
+    "policy":       "Azure/policy-auditor/azpolicy_auditor.ps1",
+    "azbackup":     "Azure/backup-auditor/azbackup_auditor.ps1",
+    "laps":         "OnPrem/Windows/laps-auditor/laps_auditor.ps1",
 }
 
 

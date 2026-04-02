@@ -68,6 +68,14 @@ KNOWN_PATTERNS = [
     "http_headers_report.json",
     # M365 / Exchange Online
     "m365_report.json",
+    # Additional AWS
+    "config_report.json",
+    "backup_report.json",
+    # Additional Azure
+    "policy_report.json",
+    "azbackup_report.json",
+    # Windows on-prem
+    "laps_report.json",
 ]
 
 # Azure/Windows patterns that require manual copy-back from a Windows machine.
@@ -87,6 +95,9 @@ AZURE_WINDOWS_PATTERNS = [
     "auditpolicy_report.json",
     "bitlocker_report.json",
     "m365_report.json",
+    "policy_report.json",
+    "azbackup_report.json",
+    "laps_report.json",
 ]
 
 # Human-readable names for display
@@ -125,6 +136,11 @@ PILLAR_LABELS = {
     "email": "Email Security (SPF/DKIM/DMARC)",
     "tls":   "SSL/TLS Certificates",
     "http_headers": "HTTP Security Headers",
+    "config": "AWS Config",
+    "backup": "AWS Backup",
+    "policy": "Azure Policy",
+    "azbackup": "Azure Backup",
+    "laps": "Windows LAPS",
 }
 
 GRADE_COLOURS = {
