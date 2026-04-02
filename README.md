@@ -2,9 +2,24 @@
 
 [![CI](https://github.com/Decdd19/SecurityAuditScripts/actions/workflows/ci.yml/badge.svg)](https://github.com/Decdd19/SecurityAuditScripts/actions/workflows/ci.yml)
 
-A collection of security auditing scripts for AWS, Azure, M365, on-premises infrastructure, and network services. Built for security engineers and sysadmins who want real visibility into their environment without relying on commercial tooling.
+A collection of security auditing scripts for AWS, Azure, M365, on-premises infrastructure, and network services. Built for security engineers and consultants who want real visibility into client environments without relying on commercial tooling.
 
 > **Purpose:** Practical, standalone scripts that give you real security insight. No agents, no SaaS dependencies — just run and review.
+
+---
+
+## Contents
+
+- [Architecture](#-architecture)
+- [Orchestrators](#-orchestrators)
+  - [audit.py — Python (AWS · Linux · Email · Network)](#auditpy--python)
+  - [Run-Audit.ps1 — PowerShell (Azure · M365 · Windows)](#run-auditps1--powershell)
+- [Repository Structure](#-repository-structure)
+- [Scripts](#-scripts)
+- [Requirements](#-requirements)
+- [Quick Start](#-quick-start)
+- [Notes](#-notes)
+- [Contributing](#-contributing)
 
 ---
 
@@ -12,26 +27,27 @@ A collection of security auditing scripts for AWS, Azure, M365, on-premises infr
 
 ```mermaid
 graph TD
-    O["🎯 audit.py — Orchestrator\nRich progress UI · ThreadPoolExecutor · exec summary"]
+    O["🎯 audit.py — Python Orchestrator\nRich progress UI · ThreadPoolExecutor · exec summary"]
+    P["⚡ Run-Audit.ps1 — PowerShell Orchestrator\nAzure · M365 · Windows · exec summary"]
 
-    subgraph AWS["☁️ AWS  —  13 auditors  (Python · boto3)"]
-        A["IAM · S3 · CloudTrail · SG · Root\nEC2 · RDS · GuardDuty · VPC Flow Logs\nLambda · Security Hub · KMS · ELB"]
+    subgraph AWS["☁️ AWS  —  15 auditors  (Python · boto3)"]
+        A["IAM · S3 · CloudTrail · SG · Root · EC2\nRDS · GuardDuty · VPC Flow Logs · Lambda\nSecurity Hub · KMS · ELB · Config · Backup"]
     end
 
     subgraph Linux["🐧 Linux  —  5 auditors  (Python · sudo)"]
         L["Users · Firewall · Sysctl · Patch · SSH"]
     end
 
-    subgraph Azure["🔷 Azure  —  7 auditors  (PowerShell · Az module)"]
-        AZ["Entra · Storage · Activity Log · NSG\nSubscription · Key Vault · Defender"]
+    subgraph Azure["🔷 Azure  —  9 auditors  (PowerShell · Az module)"]
+        AZ["Entra · Storage · Activity Log · NSG\nSubscription · Key Vault · Defender\nPolicy · Backup"]
     end
 
     subgraph M365["📨 M365  —  1 auditor  (PowerShell · Graph · ExO)"]
         M["CA MFA · Legacy Auth · Mailbox Forwarding · OAuth Consent\nMFA Coverage · Admin Roles · Guest Access"]
     end
 
-    subgraph Windows["🪟 Windows  —  6 auditors  (PowerShell)"]
-        W["AD · Local Users · Firewall\nSMB Signing · Audit Policy · BitLocker"]
+    subgraph Windows["🪟 Windows  —  7 auditors  (PowerShell)"]
+        W["AD · Local Users · Firewall · SMB Signing\nAudit Policy · BitLocker · LAPS"]
     end
 
     subgraph Email["📧 Email  —  1 auditor  (Python · dnspython)"]
@@ -44,31 +60,35 @@ graph TD
 
     O -->|"--aws"| AWS
     O -->|"--linux"| Linux
-    O -.->|"--windows (PS1 guide only)"| Azure
-    O -.->|"--windows (PS1 guide only)"| Windows
-    O -.->|"--windows (PS1 guide only)"| M365
     O -->|"--email --domain"| Email
     O -->|"--ssl / --http-headers --domain"| Network
 
+    P -->|"-Azure"| Azure
+    P -->|"-M365"| M365
+    P -->|"-Windows"| Windows
+
     AWS --> S["📊 exec_summary.py\nCross-cloud HTML report · Security score 0–100"]
     Linux --> S
-    Azure -.->|"JSON reports"| S
+    Azure --> S
     M365 -.->|"JSON reports"| S
     Email --> S
     Network --> S
+    Windows -.->|"JSON reports"| S
 ```
 
 ---
 
-## 🎯 Audit Orchestrator
+## 🎯 Orchestrators
 
-`audit.py` runs any combination of Python auditors in parallel with a live Rich progress UI and generates an executive summary on completion.
+### audit.py — Python
+
+Runs any combination of AWS, Linux, Email, and Network auditors in parallel with a live Rich progress UI, then generates an executive summary on completion.
 
 ```bash
 # Full AWS + Linux audit for a client
 python3 audit.py --client "Acme Corp" --aws --linux --output ./reports/
 
-# Everything — AWS, Linux, plus Azure/Windows PS1 instructions
+# Everything — AWS, Linux, plus Azure/Windows instructions
 python3 audit.py --client "Acme Corp" --all --profile prod
 
 # Multi-region AWS scan
@@ -77,18 +97,39 @@ python3 audit.py --client "Acme Corp" --aws --regions eu-west-1 us-east-1
 # Cherry-pick specific auditors
 python3 audit.py --client "Acme Corp" --s3 --ec2 --iam --linux_user
 
-# Print Azure/Windows PS1 run instructions only
-python3 audit.py --client "Acme Corp" --windows
-
 # Open executive summary in browser when complete
 python3 audit.py --client "Acme Corp" --all --open
 ```
 
-**Flags:** `--aws` (all 13 AWS) · `--linux` (all 5 Linux) · `--windows` (Azure/Windows PS1 guide) · `--all` (everything) · `--ssl --domain` · `--http-headers --domain` · `--email --domain` · `--profile` · `--regions` · `--output` · `--format` · `--workers` · `--open`
+**Flags:** `--aws` (all 15 AWS) · `--linux` (all 5 Linux) · `--all` · `--ssl --domain` · `--http-headers --domain` · `--email --domain` · `--profile` · `--regions` · `--output` · `--format` · `--workers` · `--open`
 
 > **Prerequisites:** `pip install boto3 rich` · AWS credentials configured · Run with `sudo` for Linux auditors
 
-> **Auto-discovery:** `audit.py` automatically discovers new `*_auditor.py` scripts added to the repo — no manual `AUDITOR_MAP` edits needed for scripts following the naming convention. Use `tools/add_auditor.py` to scaffold new auditors.
+> **Auto-discovery:** `audit.py` automatically discovers new `*_auditor.py` scripts — no manual `AUDITOR_MAP` edits needed for scripts following the naming convention. Use `tools/add_auditor.py` to scaffold new auditors.
+
+---
+
+### Run-Audit.ps1 — PowerShell
+
+The PowerShell equivalent of `audit.py`. Runs all Azure, M365, and Windows on-premises PS1 auditors sequentially, saves output to a timestamped client folder, and optionally invokes `exec_summary.py` to generate the HTML report.
+
+```powershell
+# All Azure auditors for a client
+.\Run-Audit.ps1 -Client "Acme Corp" -Azure
+
+# All Azure auditors across every subscription + open HTML report
+.\Run-Audit.ps1 -Client "Acme Corp" -Azure -AllSubscriptions -Open
+
+# Everything — Azure + M365 + Windows on-prem (run as admin)
+.\Run-Audit.ps1 -Client "Acme Corp" -All -OutputDir C:\Reports
+
+# M365 only, skip exec summary
+.\Run-Audit.ps1 -Client "Acme Corp" -M365 -SkipSummary
+```
+
+**Flags:** `-Azure` (9 auditors) · `-M365` · `-Windows` (LAPS) · `-All` · `-AllSubscriptions` · `-OutputDir` · `-SkipSummary` · `-Open`
+
+> **Prerequisites:** PowerShell 7+ · Az module · `Connect-AzAccount` already run · Python 3 for exec summary (optional)
 
 ---
 
@@ -97,61 +138,67 @@ python3 audit.py --client "Acme Corp" --all --open
 ```
 SecurityAuditScripts/
 ├── README.md
-├── audit.py                            # Orchestrator (auto-discovers auditors via AST scan)
+├── audit.py                            # Python orchestrator (auto-discovers auditors via AST scan)
+├── Run-Audit.ps1                       # PowerShell orchestrator (Azure · M365 · Windows)
 ├── scoring.py                          # Grade engine — compute_overall_score(), unit-tested
 ├── schema.py                           # Canonical FindingSchema + validate_finding()
-├── report_utils.py                     # Shared HTML/CSS generator for Linux auditor reports
+├── report_utils.py                     # Shared HTML/CSS generator for auditor reports
 ├── AWS/
 │   ├── README.md
-│   ├── iam-privilege-mapper/       # IAM users, roles, privilege escalation
-│   ├── s3-auditor/                 # S3 bucket public access, encryption, versioning
-│   ├── cloudtrail-auditor/         # CloudTrail coverage and logging gaps
-│   ├── sg-auditor/                 # Security group open ports and ingress rules
-│   ├── root-auditor/               # Root account MFA, access keys, password policy
-│   ├── ec2-auditor/                # EC2 IMDS v2, EBS encryption, public IPs, snapshots
-│   ├── rds-auditor/                # RDS public access, encryption, backups, multi-AZ
-│   ├── guardduty-auditor/          # GuardDuty enablement, findings, protection plans
-│   ├── vpcflowlogs-auditor/        # VPC flow log coverage, traffic type, retention
-│   ├── lambda-auditor/             # Lambda public URLs, IAM roles, secret env vars
-│   ├── securityhub-auditor/        # Security Hub enablement, findings, standards
-│   ├── kms-auditor/                # KMS CMK rotation, key policy, state, aliases
-│   └── elb-auditor/                # ALB/NLB access logging, TLS policy, WAF, HTTPS
+│   ├── iam-privilege-mapper/           # IAM users, roles, privilege escalation paths
+│   ├── s3-auditor/                     # S3 bucket public access, encryption, versioning
+│   ├── cloudtrail-auditor/             # CloudTrail coverage and logging gaps
+│   ├── sg-auditor/                     # Security group open ports and ingress rules
+│   ├── root-auditor/                   # Root account MFA, access keys, password policy
+│   ├── ec2-auditor/                    # EC2 IMDS v2, EBS encryption, public IPs, snapshots
+│   ├── rds-auditor/                    # RDS public access, encryption, backups, multi-AZ
+│   ├── guardduty-auditor/              # GuardDuty enablement, findings, protection plans
+│   ├── vpcflowlogs-auditor/            # VPC flow log coverage, traffic type, retention
+│   ├── lambda-auditor/                 # Lambda public URLs, IAM roles, secret env vars
+│   ├── securityhub-auditor/            # Security Hub enablement, findings, standards
+│   ├── kms-auditor/                    # KMS CMK rotation, key policy, state, aliases
+│   ├── elb-auditor/                    # ALB/NLB access logging, TLS policy, WAF, HTTPS
+│   ├── config-auditor/                 # AWS Config enablement, rules, compliance coverage
+│   └── backup-auditor/                 # AWS Backup vault coverage, retention, encryption
 ├── tools/
-│   ├── exec_summary.py             # Cross-cloud executive summary (aggregates all JSON reports, glob fallback)
-│   └── add_auditor.py              # Scaffold a new auditor stub + auto-wire into audit.py + exec_summary
+│   ├── exec_summary.py                 # Cross-cloud executive summary (aggregates all JSON reports)
+│   └── add_auditor.py                  # Scaffold a new auditor stub + auto-wire into audit.py
 ├── Azure/
 │   ├── README.md
-│   ├── entra-auditor/              # Entra ID MFA, guest roles, app credentials, privesc
-│   ├── storage-auditor/            # Storage account public access, encryption, soft delete
-│   ├── activitylog-auditor/        # Activity Log diagnostic settings and alerting
-│   ├── nsg-auditor/                # NSG open ports, orphaned groups
-│   ├── subscription-auditor/       # Defender for Cloud, PIM, Global Admin hygiene
-│   ├── keyvault-auditor/           # Key Vault RBAC, soft delete, secret/cert/key expiry
-│   └── defender-auditor/           # Defender for Cloud plans, secure score, contacts
+│   ├── entra-auditor/                  # Entra ID MFA, guest roles, app credentials, privesc
+│   ├── storage-auditor/                # Storage account public access, encryption, soft delete
+│   ├── activitylog-auditor/            # Activity Log diagnostic settings and alerting
+│   ├── nsg-auditor/                    # NSG open ports, orphaned groups
+│   ├── subscription-auditor/           # Defender for Cloud, PIM, Global Admin hygiene
+│   ├── keyvault-auditor/               # Key Vault RBAC, soft delete, secret/cert/key expiry
+│   ├── defender-auditor/               # Defender for Cloud plans, secure score, contacts
+│   ├── policy-auditor/                 # Azure Policy assignments, compliance state, exemptions
+│   └── backup-auditor/                 # Azure Backup vault coverage, retention, redundancy
 ├── M365/
-│   └── m365-auditor/               # CA MFA, legacy auth, mailbox forwarding, OAuth consent
+│   └── m365-auditor/                   # CA MFA, legacy auth, mailbox forwarding, OAuth consent
 ├── Email/
 │   ├── README.md
-│   └── email-security-auditor/  # SPF, DKIM, DMARC DNS checks
+│   └── email-security-auditor/         # SPF, DKIM, DMARC DNS checks
 ├── Network/
 │   ├── README.md
-│   ├── ssl-tls-auditor/         # SSL/TLS cert expiry, hostname, TLS version, cipher, HSTS
-│   └── http-headers-auditor/    # X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy
+│   ├── ssl-tls-auditor/                # SSL/TLS cert expiry, hostname, TLS version, cipher, HSTS
+│   └── http-headers-auditor/           # X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy
 └── OnPrem/
     ├── README.md
     ├── Windows/
-    │   ├── ad-auditor/             # Active Directory hygiene, Kerberoasting, delegation
-    │   ├── localuser-auditor/      # Local users, registry, NTLM, LAPS, WDigest
-    │   ├── winfirewall-auditor/    # Firewall profiles, open ports, rule analysis
-    │   ├── smbsigning-auditor/     # SMB signing enforcement, NTLM relay prevention
-    │   ├── auditpolicy-auditor/    # Audit policy subcategories (process, logon, privilege)
-    │   └── bitlocker-auditor/      # BitLocker drive encryption status and method
+    │   ├── ad-auditor/                 # Active Directory hygiene, Kerberoasting, delegation
+    │   ├── localuser-auditor/          # Local users, registry, NTLM, LAPS, WDigest
+    │   ├── winfirewall-auditor/        # Firewall profiles, open ports, rule analysis
+    │   ├── smbsigning-auditor/         # SMB signing enforcement, NTLM relay prevention
+    │   ├── auditpolicy-auditor/        # Audit policy subcategories (process, logon, privilege)
+    │   ├── bitlocker-auditor/          # BitLocker drive encryption status and method
+    │   └── laps-auditor/               # LAPS deployment coverage and configuration
     └── Linux/
-        ├── linux-user-auditor/     # Users, sudo, SSH, password policy
-        ├── linux-firewall-auditor/ # iptables/nftables/ufw/firewalld, auditd, syslog
-        ├── linux-sysctl-auditor/   # Kernel hardening, 24 CIS sysctl parameters
-        ├── linux-patch-auditor/    # Available updates, auto-update agent, kernel version
-        └── linux-ssh-auditor/      # SSH daemon hardening via sshd -T (21 checks)
+        ├── linux-user-auditor/         # Users, sudo, SSH, password policy
+        ├── linux-firewall-auditor/     # iptables/nftables/ufw/firewalld, auditd, syslog
+        ├── linux-sysctl-auditor/       # Kernel hardening, 24 CIS sysctl parameters
+        ├── linux-patch-auditor/        # Available updates, auto-update agent, kernel version
+        └── linux-ssh-auditor/          # SSH daemon hardening via sshd -T (21 checks)
 ```
 
 ---
@@ -175,12 +222,8 @@ SecurityAuditScripts/
 | [Security Hub Auditor](./AWS/securityhub-auditor/) | Checks Security Hub enablement across all regions, active finding counts by severity, and enabled compliance standards (CIS, PCI DSS, FSBP) with control pass rates. | JSON, CSV, HTML |
 | [KMS Auditor](./AWS/kms-auditor/) | Audits customer-managed KMS keys across all regions for disabled rotation, dangerous key policies (public/cross-account wildcard), key state, unaliased keys, and key spec. | JSON, CSV, HTML |
 | [ELB Auditor](./AWS/elb-auditor/) | Audits Application and Network Load Balancers for missing access logging, no deletion protection, HTTP→HTTPS redirect gaps (ALB), outdated TLS policies, and missing WAF association (ALB). | JSON, CSV, HTML |
-
-### Cross-Cloud
-
-| Script | Description | Output |
-|--------|-------------|--------|
-| [Executive Summary](./tools/) | Aggregates JSON reports from all AWS and Azure auditors into a single executive HTML report with an overall security score (0–100), per-pillar risk cards, top findings, and quick wins. | HTML |
+| [Config Auditor](./AWS/config-auditor/) | Checks AWS Config enablement per region, active rule counts, compliance status, and recording coverage gaps. | JSON, CSV, HTML |
+| [Backup Auditor](./AWS/backup-auditor/) | Audits AWS Backup vault coverage, backup plan assignments, retention policy, and encryption configuration across all supported resource types. | JSON, CSV, HTML |
 
 ### Azure
 
@@ -192,7 +235,9 @@ SecurityAuditScripts/
 | [NSG Auditor](./Azure/nsg-auditor/) | Scans Network Security Groups for dangerous open ports, internet-exposed rules, and orphaned groups. | JSON, CSV, HTML |
 | [Subscription Auditor](./Azure/subscription-auditor/) | Audits subscription posture including Defender for Cloud, permanent privileged roles, Global Admin hygiene, and budget alerts. | JSON, CSV, HTML |
 | [Key Vault Auditor](./Azure/keyvault-auditor/) | Audits Key Vaults for RBAC vs legacy access policy, purge protection, soft delete, diagnostic logging, and expired or expiring secrets, certificates, and keys. | JSON, CSV, HTML |
-| [Defender Auditor](./Azure/defender-auditor/) | Audits Defender for Cloud plan enablement per resource type, secure score, security contacts, and auto-provisioning of monitoring agents. Supports all subscriptions. | JSON, CSV, HTML |
+| [Defender Auditor](./Azure/defender-auditor/) | Audits Defender for Cloud plan enablement per resource type, secure score, security contacts, and auto-provisioning of monitoring agents. | JSON, CSV, HTML |
+| [Policy Auditor](./Azure/policy-auditor/) | Checks Azure Policy assignments, compliance state, and exemptions across the subscription or management group. | JSON, CSV, HTML |
+| [Backup Auditor](./Azure/backup-auditor/) | Audits Azure Backup vault coverage, backup policies, retention rules, redundancy settings, and soft-delete configuration. | JSON, CSV, HTML |
 
 ### M365 / Exchange Online
 
@@ -200,21 +245,33 @@ SecurityAuditScripts/
 |--------|-------------|--------|
 | [M365 Auditor](./M365/m365-auditor/) | Audits Microsoft 365 tenant security controls — Conditional Access MFA enforcement, legacy authentication blocking, Exchange Online mailbox auto-forwarding and inbox forwarding rules, OAuth app user consent policy, per-user MFA registration coverage, privileged admin role enumeration, and guest/external user review. Requires Microsoft.Graph and ExchangeOnlineManagement modules. | JSON, CSV, HTML |
 
-### On-Premises
+### On-Premises — Windows
 
 | Script | Description | Output |
 |--------|-------------|--------|
 | [AD Auditor](./OnPrem/Windows/ad-auditor/) | Audits Active Directory for stale accounts, Kerberoastable users, weak password policy, unconstrained delegation, and privileged group hygiene. | JSON, CSV, HTML |
 | [Local User Auditor](./OnPrem/Windows/localuser-auditor/) | Audits local accounts, registry autologon, WDigest, NTLMv1, LAPS detection, and local admin group membership. | JSON, CSV, HTML |
 | [Windows Firewall Auditor](./OnPrem/Windows/winfirewall-auditor/) | Audits Windows Firewall profiles and rules for disabled profiles, default-allow policies, and dangerous ports open to any source. | JSON, CSV, HTML |
+| [SMB Signing Auditor](./OnPrem/Windows/smbsigning-auditor/) | Checks SMB signing enforcement on server and client. Missing server-side enforcement allows NTLM relay attacks. | JSON, CSV, HTML |
+| [Audit Policy Auditor](./OnPrem/Windows/auditpolicy-auditor/) | Checks 15 critical Windows audit policy subcategories (logon, process creation, privilege use, etc.) against CIS baseline. | JSON, CSV, HTML |
+| [BitLocker Auditor](./OnPrem/Windows/bitlocker-auditor/) | Audits BitLocker drive encryption status, encryption method strength, TPM protector, and recovery password configuration. | JSON, CSV, HTML |
+| [LAPS Auditor](./OnPrem/Windows/laps-auditor/) | Checks LAPS deployment coverage across domain-joined computers — managed vs unmanaged machines, password age, and expiry configuration. | JSON, CSV, HTML |
+
+### On-Premises — Linux
+
+| Script | Description | Output |
+|--------|-------------|--------|
 | [Linux User Auditor](./OnPrem/Linux/linux-user-auditor/) | Audits Linux user accounts, sudo rules, SSH configuration, password policy from login.defs, and stale accounts. | JSON, CSV, HTML |
 | [Linux Firewall Auditor](./OnPrem/Linux/linux-firewall-auditor/) | Auto-detects and audits iptables/nftables/ufw/firewalld. Also checks auditd rules and syslog configuration. | JSON, CSV, HTML |
 | [Linux Sysctl Auditor](./OnPrem/Linux/linux-sysctl-auditor/) | Checks 24 CIS Benchmark kernel parameters via sysctl: network hardening, TCP, ASLR, dmesg restriction, ptrace scope, protected hardlinks/symlinks. | JSON, CSV, HTML |
 | [Linux Patch Auditor](./OnPrem/Linux/linux-patch-auditor/) | Auto-detects apt/yum/dnf/zypper and counts available updates (total and security-specific), checks auto-update agent, last update timestamp, and kernel upgrade status. | JSON, CSV, HTML |
 | [Linux SSH Auditor](./OnPrem/Linux/linux-ssh-auditor/) | Reads the effective SSH daemon configuration via `sshd -T` and checks 21 hardening parameters: root login, password auth, crypto ciphers/MACs/KEX, X11 forwarding, session timeouts, and more. | JSON, CSV, HTML |
-| [SMB Signing Auditor](./OnPrem/Windows/smbsigning-auditor/) | Checks SMB signing enforcement on server and client. Missing server-side enforcement allows NTLM relay attacks. | JSON, CSV, HTML |
-| [Audit Policy Auditor](./OnPrem/Windows/auditpolicy-auditor/) | Checks 15 critical Windows audit policy subcategories (logon, process creation, privilege use, etc.) against CIS baseline. | JSON, CSV, HTML |
-| [BitLocker Auditor](./OnPrem/Windows/bitlocker-auditor/) | Audits BitLocker drive encryption status, encryption method strength, TPM protector, and recovery password configuration. | JSON, CSV, HTML |
+
+### Cross-Cloud
+
+| Script | Description | Output |
+|--------|-------------|--------|
+| [Executive Summary](./tools/) | Aggregates JSON reports from all auditors into a single executive HTML report with an overall security score (0–100), per-pillar risk cards, top findings, and quick wins. Invoked automatically by both orchestrators. | HTML |
 
 ### Email
 
@@ -231,7 +288,7 @@ SecurityAuditScripts/
 
 ---
 
-## ⚙️ General Requirements
+## ⚙️ Requirements
 
 ### AWS
 
@@ -269,16 +326,13 @@ Connect-AzAccount
 ### M365 / Exchange Online
 
 - PowerShell 7+
-- Az module (`Connect-AzAccount`) for tenant context
 - Microsoft Graph SDK for CA policies and consent policy
 - ExchangeOnlineManagement for mailbox and inbox rule checks
 
 ```powershell
-Install-Module Az -Scope CurrentUser -Force
 Install-Module Microsoft.Graph -Scope CurrentUser -Force
 Install-Module ExchangeOnlineManagement -Scope CurrentUser -Force
 
-Connect-AzAccount
 Connect-MgGraph -Scopes "Policy.Read.All","Application.Read.All","User.Read.All","Directory.Read.All","UserAuthenticationMethod.Read.All"
 Connect-ExchangeOnline -UserPrincipalName admin@contoso.com
 ```
@@ -310,110 +364,93 @@ Connect-ExchangeOnline -UserPrincipalName admin@contoso.com
 
 ## 🚀 Quick Start
 
-### Full Audit (Orchestrator)
+### Python Orchestrator — AWS + Linux
+
 ```bash
 git clone https://github.com/Decdd19/SecurityAuditScripts.git
 cd SecurityAuditScripts
 pip install boto3 rich
-sudo python3 audit.py --client "Acme Corp" --all --open --output ./reports/
+
+# Full AWS + Linux audit, open HTML report when done
+sudo python3 audit.py --client "Acme Corp" --aws --linux --open --output ./reports/
 ```
 
-> See the [Audit Orchestrator](#-audit-orchestrator) section above for all flags and examples.
+### PowerShell Orchestrator — Azure + M365 + Windows
 
-### AWS
+```powershell
+git clone https://github.com/Decdd19/SecurityAuditScripts.git
+cd SecurityAuditScripts
+Connect-AzAccount
+
+# All Azure auditors, open HTML report when done
+.\Run-Audit.ps1 -Client "Acme Corp" -Azure -Open
+
+# Everything — Azure + M365 + Windows on-prem (run as admin)
+.\Run-Audit.ps1 -Client "Acme Corp" -All -AllSubscriptions -Open
+```
+
+### AWS — individual scripts
+
 ```bash
 git clone https://github.com/Decdd19/SecurityAuditScripts.git
 cd SecurityAuditScripts
 pip install boto3
 
-# Run individual auditors
 python3 AWS/iam-privilege-mapper/iam_mapper_v2.py --format html --output iam_report
+python3 AWS/s3-auditor/s3_auditor.py --format all --output s3_report
 python3 AWS/ec2-auditor/ec2_auditor.py --format all --output ec2_report
-python3 AWS/rds-auditor/rds_auditor.py --format all --output rds_report
-
-# Generate cross-cloud executive summary (after running auditors)
-python3 tools/exec_summary.py --input-dir . --output exec_summary.html
 ```
 
-### Azure / Windows / M365 (Orchestrator)
+### Azure — individual scripts
 
-`Run-Audit.ps1` is the PowerShell equivalent of `audit.py` — a single entry point that runs all relevant PS1 auditors, saves output to a client folder, and optionally generates the executive summary (requires Python).
-
-```powershell
-git clone https://github.com/Decdd19/SecurityAuditScripts.git
-cd SecurityAuditScripts
-Connect-AzAccount   # authenticate once
-
-# All Azure auditors for a client
-.\Run-Audit.ps1 -Client "Acme Corp" -Azure
-
-# All Azure auditors across every subscription + open HTML report
-.\Run-Audit.ps1 -Client "Acme Corp" -Azure -AllSubscriptions -Open
-
-# Azure + M365 + Windows on-prem (run as admin)
-.\Run-Audit.ps1 -Client "Acme Corp" -All -OutputDir C:\Reports
-
-# M365 only, skip exec summary
-.\Run-Audit.ps1 -Client "Acme Corp" -M365 -SkipSummary
-```
-
-**Flags:** `-Azure` (9 auditors) · `-M365` · `-Windows` (LAPS) · `-All` · `-AllSubscriptions` · `-OutputDir` · `-SkipSummary` · `-Open`
-
-> **Prerequisites:** PowerShell 7+ · Az module · `Connect-AzAccount` already run · Python 3 for exec summary (optional)
-
-### Azure (individual scripts)
 ```powershell
 git clone https://github.com/Decdd19/SecurityAuditScripts.git
 cd SecurityAuditScripts
 Connect-AzAccount
+
 .\Azure\entra-auditor\entra_auditor.ps1 -Format html
+.\Azure\keyvault-auditor\keyvault_auditor.ps1 -Format all
+.\Azure\defender-auditor\defender_auditor.ps1 -AllSubscriptions -Format html
 ```
 
-### On-Premises (Windows)
+### M365
+
 ```powershell
-git clone https://github.com/Decdd19/SecurityAuditScripts.git
-cd SecurityAuditScripts
+# Connect first — see M365 requirements above
+.\M365\m365-auditor\m365_auditor.ps1 -TenantDomain contoso.com -Format all
+```
+
+### On-Premises — Windows
+
+```powershell
+# Run as administrator
 .\OnPrem\Windows\winfirewall-auditor\winfirewall_auditor.ps1 -Format html
 .\OnPrem\Windows\localuser-auditor\localuser_auditor.ps1 -Format all
 .\OnPrem\Windows\ad-auditor\ad_auditor.ps1 -Format html  # domain-joined only
 ```
 
-### On-Premises (Linux)
-```bash
-git clone https://github.com/Decdd19/SecurityAuditScripts.git
-cd SecurityAuditScripts
+### On-Premises — Linux
 
-# All auditors except SSH run without sudo
+```bash
+# Most auditors run without sudo
 python3 OnPrem/Linux/linux-user-auditor/linux_user_auditor.py --format html
 python3 OnPrem/Linux/linux-firewall-auditor/linux_firewall_auditor.py --format all
 python3 OnPrem/Linux/linux-sysctl-auditor/linux_sysctl_auditor.py --format all
 python3 OnPrem/Linux/linux-patch-auditor/linux_patch_auditor.py --format all
 
-# SSH auditor requires sudo for sshd -T (returns N/A for all checks without it)
+# SSH auditor requires sudo for sshd -T
 sudo python3 OnPrem/Linux/linux-ssh-auditor/linux_ssh_auditor.py --format html
 ```
 
-### M365
-```powershell
-git clone https://github.com/Decdd19/SecurityAuditScripts.git
-cd SecurityAuditScripts
-# Connect first — see M365 prerequisites above
-.\M365\m365-auditor\m365_auditor.ps1 -TenantDomain contoso.com -Format all
-```
+### Email + Network
 
-### Network
 ```bash
-git clone https://github.com/Decdd19/SecurityAuditScripts.git
-cd SecurityAuditScripts
-
-# Standalone — no dependencies required
+python3 Email/email-security-auditor/email_security_auditor.py --domain acme.ie --format all
 python3 Network/ssl-tls-auditor/ssl_tls_auditor.py --domain acme.ie --format all
 python3 Network/http-headers-auditor/http_headers_auditor.py --domain acme.ie --format all
 
 # Via orchestrator
-python3 audit.py --client "Acme Corp" --ssl --domain acme.ie
-python3 audit.py --client "Acme Corp" --http-headers --domain acme.ie
-python3 audit.py --client "Acme Corp" --ssl --http-headers --domain acme.ie
+python3 audit.py --client "Acme Corp" --email --ssl --http-headers --domain acme.ie
 ```
 
 ---
@@ -422,20 +459,18 @@ python3 audit.py --client "Acme Corp" --ssl --http-headers --domain acme.ie
 
 - Scripts are **read-only** — they query configuration and do not make any changes to your environment
 - AWS scripts are designed to run in **AWS CloudShell**; Azure scripts run in **Azure CloudShell** or locally; OnPrem scripts run directly on the target machine
-- Output files are written to the current working directory unless specified otherwise
-- All output files are created with owner-only permissions (600)
-- AWS scripts support `--format` (json, csv, html, all, stdout) and `--profile` flags; EC2 and RDS auditors also accept `--regions` to limit scope
-- Azure scripts support `-Format` (json, csv, html, all, stdout) and `-AllSubscriptions` flags
-- OnPrem Windows scripts support `-Format` (json, csv, html, all, stdout)
-- OnPrem Linux scripts support `--format` (json, csv, html, all, stdout)
-- Network scripts support `--format` (json, csv, html, all, stdout) and `--port` flags; no credentials required
-- All JSON findings include a `cis_control` field mapping each finding to its primary CIS v8 Control (e.g. CIS 3 = Data Protection, CIS 4 = Secure Configuration, CIS 6 = Access Control Management)
+- Output files are written to the current working directory unless `--output` / `-Output` or `--output-dir` / `-OutputDir` is specified
+- All output files are created with owner-only permissions (mode 600)
+- All JSON findings include a `cis_control` field mapping each finding to its primary CIS v8 Control
+- AWS scripts support `--format` (json, csv, html, all, stdout) and `--profile`; EC2/RDS/Lambda also accept `--regions`
+- Azure scripts support `-Format` (json, csv, html, all, stdout) and `-AllSubscriptions`
+- OnPrem and Network scripts support `--format` (json, csv, html, all, stdout)
 
 ---
 
 ## 🤝 Contributing
 
-Feel free to open a PR or raise an issue if you have improvements, bug fixes, or want to add a script for another service.
+Pull requests and issues are welcome. To add a new auditor, use `tools/add_auditor.py` to scaffold the stub — it wires the script into `audit.py` and `exec_summary.py` automatically.
 
 ---
 
