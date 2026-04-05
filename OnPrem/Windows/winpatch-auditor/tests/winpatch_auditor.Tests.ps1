@@ -341,7 +341,7 @@ Describe 'Get-WinPatchFindings' {
             $fakeUpdate = [PSCustomObject]@{ MsrcSeverity = 'Critical'; Title = 'Critical Security Update' }
             $fakeResult = [PSCustomObject]@{ Updates = @($fakeUpdate) }
             $fakeSearcher = [PSCustomObject]@{}
-            $fakeSearcher | Add-Member -MemberType ScriptMethod -Name Search -Value { param($criteria) $fakeResult }
+            $fakeSearcher | Add-Member -MemberType ScriptMethod -Name Search -Value ({ param($criteria) $fakeResult }.GetNewClosure())
             return $fakeSearcher
         }
 
@@ -364,7 +364,7 @@ Describe 'Get-WinPatchFindings' {
         Mock New-UpdateSearcher {
             $fakeResult   = [PSCustomObject]@{ Updates = @() }
             $fakeSearcher = [PSCustomObject]@{}
-            $fakeSearcher | Add-Member -MemberType ScriptMethod -Name Search -Value { param($criteria) $fakeResult }
+            $fakeSearcher | Add-Member -MemberType ScriptMethod -Name Search -Value ({ param($criteria) $fakeResult }.GetNewClosure())
             return $fakeSearcher
         }
 
