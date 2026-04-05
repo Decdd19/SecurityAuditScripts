@@ -223,6 +223,110 @@ Describe 'Get-WinPatchFindings' {
         $finding.Score    | Should -Be 5
         $result.summary.auto_update_enabled | Should -Be $false
     }
+
+    It '13b. PATCH-05 flags MEDIUM when AUOptions = 2 (notify-only)' {
+        Mock Get-HotFix {
+            @([PSCustomObject]@{ InstalledOn = (Get-Date).AddDays(-5); HotFixID = 'KB444000' })
+        }
+        Mock Get-CimInstance { [PSCustomObject]@{ LastBootUpTime = (Get-Date).AddDays(-5) } }
+        Mock Get-Service { [PSCustomObject]@{ Status = 'Running'; StartType = 'Automatic' } }
+        Mock Get-ItemProperty {
+            param($Path, $Name, $ErrorAction)
+            if ($Path -like '*WindowsUpdate*AU*' -and $Name -eq 'AUOptions') {
+                return [PSCustomObject]@{ AUOptions = 2 }
+            }
+            return $null
+        }
+
+        $result  = Get-WinPatchFindings -MaxSearchSeconds 0
+        $finding = $result.findings | Where-Object FindingType -eq 'AutoUpdateDisabled'
+        $finding | Should -Not -BeNullOrEmpty
+        $finding.Severity | Should -Be 'MEDIUM'
+        $finding.Score    | Should -Be 5
+        $result.summary.auto_update_enabled | Should -Be $false
+    }
+
+    # ── PATCH-03: Additional reboot-pending registry paths ────────────────────
+
+    It '9b. PATCH-03 flags HIGH when PendingFileRenameOperations key is set' {
+        Mock Get-HotFix {
+            @([PSCustomObject]@{ InstalledOn = (Get-Date).AddDays(-5); HotFixID = 'KB111000' })
+        }
+        Mock Get-CimInstance { [PSCustomObject]@{ LastBootUpTime = (Get-Date).AddDays(-5) } }
+        Mock Get-Service { [PSCustomObject]@{ Status = 'Running'; StartType = 'Automatic' } }
+        Mock Get-ItemProperty {
+            param($Path, $Name, $ErrorAction)
+            if ($Path -like '*Session Manager*' -and $Name -eq 'PendingFileRenameOperations') {
+                return [PSCustomObject]@{ PendingFileRenameOperations = @('\??\C:\TEMP\old.dll') }
+            }
+            return $null
+        }
+
+        $result  = Get-WinPatchFindings -MaxSearchSeconds 0
+        $finding = $result.findings | Where-Object FindingType -eq 'PendingRebootRequired'
+        $finding | Should -Not -BeNullOrEmpty
+        $finding.Severity | Should -Be 'HIGH'
+        $result.summary.pending_reboot | Should -Be $true
+    }
+
+    It '9c. PATCH-03 flags HIGH when SoftwareDistribution RebootRequired key exists' {
+        Mock Get-HotFix {
+            @([PSCustomObject]@{ InstalledOn = (Get-Date).AddDays(-5); HotFixID = 'KB222000' })
+        }
+        Mock Get-CimInstance { [PSCustomObject]@{ LastBootUpTime = (Get-Date).AddDays(-5) } }
+        Mock Get-Service { [PSCustomObject]@{ Status = 'Running'; StartType = 'Automatic' } }
+        Mock Get-ItemProperty {
+            param($Path, $Name, $ErrorAction)
+            if ($Path -like '*SoftwareDistribution*RebootRequired*') {
+                return [PSCustomObject]@{}
+            }
+            return $null
+        }
+
+        $result  = Get-WinPatchFindings -MaxSearchSeconds 0
+        $finding = $result.findings | Where-Object FindingType -eq 'PendingRebootRequired'
+        $finding | Should -Not -BeNullOrEmpty
+        $finding.Severity | Should -Be 'HIGH'
+        $result.summary.pending_reboot | Should -Be $true
+    }
+
+    # ── PATCH-06: WSUS configured ─────────────────────────────────────────────
+
+    It '14. PATCH-06 surfaces WsusConfigured finding when WUServer key present' {
+        Mock Get-HotFix {
+            @([PSCustomObject]@{ InstalledOn = (Get-Date).AddDays(-5); HotFixID = 'KB333000' })
+        }
+        Mock Get-CimInstance { [PSCustomObject]@{ LastBootUpTime = (Get-Date).AddDays(-5) } }
+        Mock Get-Service { [PSCustomObject]@{ Status = 'Running'; StartType = 'Automatic' } }
+        Mock Get-ItemProperty {
+            param($Path, $Name, $ErrorAction)
+            if ($Path -like '*WindowsUpdate' -and $Name -eq 'WUServer') {
+                return [PSCustomObject]@{ WUServer = 'http://wsus.corp.local:8530' }
+            }
+            return $null
+        }
+
+        $result  = Get-WinPatchFindings -MaxSearchSeconds 0
+        $finding = $result.findings | Where-Object FindingType -eq 'WsusConfigured'
+        $finding | Should -Not -BeNullOrEmpty
+        $finding.Severity | Should -Be 'LOW'
+        $finding.Score    | Should -Be 0
+        $result.summary.wsus_server | Should -Be 'http://wsus.corp.local:8530'
+    }
+
+    It '15. PATCH-06 produces no WsusConfigured finding when WUServer absent' {
+        Mock Get-HotFix {
+            @([PSCustomObject]@{ InstalledOn = (Get-Date).AddDays(-5); HotFixID = 'KB444001' })
+        }
+        Mock Get-CimInstance { [PSCustomObject]@{ LastBootUpTime = (Get-Date).AddDays(-5) } }
+        Mock Get-Service { [PSCustomObject]@{ Status = 'Running'; StartType = 'Automatic' } }
+        Mock Get-ItemProperty { $null }
+
+        $result  = Get-WinPatchFindings -MaxSearchSeconds 0
+        $finding = $result.findings | Where-Object FindingType -eq 'WsusConfigured'
+        $finding | Should -BeNullOrEmpty
+        $result.summary.wsus_server | Should -BeNullOrEmpty
+    }
 }
 
 Describe 'Get-SeverityLabel' {
