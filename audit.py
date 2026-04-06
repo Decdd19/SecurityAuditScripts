@@ -194,6 +194,7 @@ WINDOWS_PS1: Dict[str, str] = {
     "policy":       "Azure/policy-auditor/azpolicy_auditor.ps1",
     "azbackup":     "Azure/backup-auditor/azbackup_auditor.ps1",
     "laps":         "OnPrem/Windows/laps-auditor/laps_auditor.ps1",
+    "netexpose":    "OnPrem/Windows/netexpose-auditor/netexpose_auditor.ps1",
 }
 
 

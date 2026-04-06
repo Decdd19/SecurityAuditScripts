@@ -197,7 +197,8 @@ SecurityAuditScripts/
     │   ├── auditpolicy-auditor/        # Audit policy subcategories (process, logon, privilege)
     │   ├── bitlocker-auditor/          # BitLocker drive encryption status and method
     │   ├── laps-auditor/               # LAPS deployment coverage and configuration
-    │   └── winpatch-auditor/          # Patch currency, uptime, WU config, pending updates
+    │   ├── winpatch-auditor/               # Windows Update patch currency and pending reboots
+    │   └── netexpose-auditor/              # LAN port scan — RDP/SMB/WinRM/LDAP exposure (NE-01–NE-09)
     └── Linux/
         ├── linux-user-auditor/         # Users, sudo, SSH, password policy
         ├── linux-firewall-auditor/     # iptables/nftables/ufw/firewalld, auditd, syslog
@@ -266,6 +267,7 @@ SecurityAuditScripts/
 | [BitLocker Auditor](./OnPrem/Windows/bitlocker-auditor/) | Audits BitLocker drive encryption status, encryption method strength, TPM protector, and recovery password configuration. | JSON, CSV, HTML |
 | [LAPS Auditor](./OnPrem/Windows/laps-auditor/) | Checks LAPS deployment coverage across domain-joined computers — managed vs unmanaged machines, password age, and expiry configuration. | JSON, CSV, HTML |
 | [Windows Patch Auditor](./OnPrem/Windows/winpatch-auditor/) | Checks last patch age via `Get-HotFix`, system uptime and reboot state, Windows Update service and auto-update policy, and enumerates pending security updates via the Windows Update Agent COM API. | JSON, CSV, HTML |
+| [Network Exposure Auditor](./OnPrem/Windows/netexpose-auditor/) | Active LAN port scan from the assessor's machine. Probes each host in a target IP or CIDR range for dangerous exposed services: RDP (3389), SMB (445), NetBIOS (139), RPC (135), WinRM (5985/5986), LDAP (389/636), MSSQL (1433). Additional ports via -ExtraPorts. Uses ForEach-Object -Parallel for fast /24 scans. | JSON, CSV, HTML |
 
 ### On-Premises — Linux
 

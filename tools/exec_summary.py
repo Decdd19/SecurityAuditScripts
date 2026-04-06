@@ -81,6 +81,7 @@ KNOWN_PATTERNS = [
     # Windows on-prem
     "laps_report.json",
     "winpatch_report.json",
+    "netexpose_report.json",
 ]
 
 # Azure/Windows patterns that require manual copy-back from a Windows machine.
@@ -108,6 +109,7 @@ AZURE_WINDOWS_PATTERNS = [
     "azbackup_report.json",
     "laps_report.json",
     "winpatch_report.json",
+    "netexpose_report.json",
 ]
 
 # Human-readable names for display
@@ -156,6 +158,7 @@ PILLAR_LABELS = {
     "azbackup": "Azure Backup",
     "laps": "Windows LAPS",
     "winpatch": "Windows Patch Status",
+    "netexpose": "Network Exposure",
 }
 
 GRADE_COLOURS = {

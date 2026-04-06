@@ -137,8 +137,9 @@ $M365Auditors = @(
 )
 
 $WindowsAuditors = @(
-    @{ Name = 'laps';         Script = 'OnPrem\Windows\laps-auditor\laps_auditor.ps1';        Prefix = 'laps_report';         AllSubs = $false }
-    @{ Name = 'winpatch';     Script = 'OnPrem\Windows\winpatch-auditor\winpatch_auditor.ps1'; Prefix = 'winpatch_report';     AllSubs = $false }
+    @{ Name = 'laps';         Script = 'OnPrem\Windows\laps-auditor\laps_auditor.ps1';               Prefix = 'laps_report';         AllSubs = $false }
+    @{ Name = 'winpatch';     Script = 'OnPrem\Windows\winpatch-auditor\winpatch_auditor.ps1';        Prefix = 'winpatch_report';     AllSubs = $false }
+    @{ Name = 'netexpose';    Script = 'OnPrem\Windows\netexpose-auditor\netexpose_auditor.ps1';      Prefix = 'netexpose_report';    AllSubs = $false }
 )
 
 # ── Build run list ────────────────────────────────────────────────────────────
