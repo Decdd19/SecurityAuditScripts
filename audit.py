@@ -196,6 +196,7 @@ WINDOWS_PS1: Dict[str, str] = {
     "azbackup":     "Azure/backup-auditor/azbackup_auditor.ps1",
     "laps":         "OnPrem/Windows/laps-auditor/laps_auditor.ps1",
     "netexpose":    "OnPrem/Windows/netexpose-auditor/netexpose_auditor.ps1",
+    "mde":          "M365/mde-auditor/mde_auditor.ps1",
 }
 
 
@@ -227,7 +228,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
   # JSON output only, 8 parallel workers, open summary in browser when done
   python3 audit.py --client "Acme Corp" --aws --format json --workers 8 --open
 
-━━━ AWS AUDITORS (--aws runs all 13) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━ AWS AUDITORS (--aws runs all 15) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   --s3           Bucket public access, encryption, versioning, logging
   --ec2          Instance exposure, IMDSv2, security groups, EBS encryption  *

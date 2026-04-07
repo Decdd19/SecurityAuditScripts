@@ -138,8 +138,15 @@ $M365Auditors = @(
 )
 
 $WindowsAuditors = @(
+    @{ Name = 'ad';           Script = 'OnPrem\Windows\ad-auditor\ad_auditor.ps1';                   Prefix = 'ad_report';           AllSubs = $false }
+    @{ Name = 'localuser';    Script = 'OnPrem\Windows\localuser-auditor\localuser_auditor.ps1';      Prefix = 'localuser_report';    AllSubs = $false }
+    @{ Name = 'winfirewall';  Script = 'OnPrem\Windows\winfirewall-auditor\winfirewall_auditor.ps1';  Prefix = 'winfirewall_report';  AllSubs = $false }
+    @{ Name = 'smbsigning';   Script = 'OnPrem\Windows\smbsigning-auditor\smbsigning_auditor.ps1';   Prefix = 'smbsigning_report';   AllSubs = $false }
+    @{ Name = 'auditpolicy';  Script = 'OnPrem\Windows\auditpolicy-auditor\auditpolicy_auditor.ps1'; Prefix = 'auditpolicy_report';  AllSubs = $false }
+    @{ Name = 'bitlocker';    Script = 'OnPrem\Windows\bitlocker-auditor\bitlocker_auditor.ps1';      Prefix = 'bitlocker_report';    AllSubs = $false }
     @{ Name = 'laps';         Script = 'OnPrem\Windows\laps-auditor\laps_auditor.ps1';               Prefix = 'laps_report';         AllSubs = $false }
     @{ Name = 'winpatch';     Script = 'OnPrem\Windows\winpatch-auditor\winpatch_auditor.ps1';        Prefix = 'winpatch_report';     AllSubs = $false }
+    @{ Name = 'mde';          Script = 'M365\mde-auditor\mde_auditor.ps1';                           Prefix = 'mde_report';          AllSubs = $false }
     # netexpose requires -Target (mandatory); run standalone: .\netexpose_auditor.ps1 -Target 192.168.1.0/24
 )
 

@@ -83,6 +83,8 @@ KNOWN_PATTERNS = [
     "laps_report.json",
     "winpatch_report.json",
     "netexpose_report.json",
+    # M365 endpoint security
+    "mde_report.json",
 ]
 
 # Azure/Windows patterns that require manual copy-back from a Windows machine.
@@ -112,6 +114,8 @@ AZURE_WINDOWS_PATTERNS = [
     "laps_report.json",
     "winpatch_report.json",
     "netexpose_report.json",
+    # M365 endpoint security
+    "mde_report.json",
 ]
 
 # Human-readable names for display
@@ -153,7 +157,7 @@ PILLAR_LABELS = {
     "elb": "Load Balancers",
     "defender": "Defender for Cloud",
     "email": "Email Security (SPF/DKIM/DMARC)",
-    "tls":   "SSL/TLS Certificates",
+    "ssl":   "SSL/TLS Certificates",
     "http_headers": "HTTP Security Headers",
     "config": "AWS Config",
     "backup": "AWS Backup",
@@ -162,6 +166,7 @@ PILLAR_LABELS = {
     "laps": "Windows LAPS",
     "winpatch": "Windows Patch Status",
     "netexpose": "Network Exposure",
+    "mde":      "Defender for Endpoint",
 }
 
 GRADE_COLOURS = {
