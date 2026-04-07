@@ -82,7 +82,7 @@ Calls `Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy`. Flags if `IsEnable
 
 #### `Get-CustomBannedPasswordFindings → [PSCustomObject[]]`
 
-Uses same directory settings as `Get-SmartLockoutFindings`. Flags if `enableBannedPasswordCheckOnPremises -eq $false` or `banPasswordList` is null/empty.
+Uses same directory settings as `Get-SmartLockoutFindings`. Flags if `enableBannedPasswordCheck -eq $false` or `banPasswordList` is null/empty.
 
 ### Finding shape
 

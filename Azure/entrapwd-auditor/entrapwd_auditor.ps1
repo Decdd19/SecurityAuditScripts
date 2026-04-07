@@ -202,7 +202,7 @@ function Get-CustomBannedPasswordFindings {
         $values = @{}
         foreach ($v in $pwdSettings.Values) { $values[$v.Name] = $v.Value }
 
-        $checkEnabled = $values['enableBannedPasswordCheckOnPremises']
+        $checkEnabled = $values['enableBannedPasswordCheck']
         $banList      = $values['banPasswordList']
 
         if ($checkEnabled -eq 'false' -or [string]::IsNullOrWhiteSpace($banList)) {

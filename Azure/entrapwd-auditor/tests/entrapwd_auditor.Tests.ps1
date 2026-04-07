@@ -164,7 +164,7 @@ Describe 'Get-CustomBannedPasswordFindings' {
             @([PSCustomObject]@{
                 DisplayName = 'Password Rule Settings'
                 Values = @(
-                    [PSCustomObject]@{ Name = 'enableBannedPasswordCheckOnPremises'; Value = 'false'   }
+                    [PSCustomObject]@{ Name = 'enableBannedPasswordCheck'; Value = 'false'   }
                     [PSCustomObject]@{ Name = 'banPasswordList';                     Value = 'contoso' }
                 )
             })
@@ -181,7 +181,7 @@ Describe 'Get-CustomBannedPasswordFindings' {
             @([PSCustomObject]@{
                 DisplayName = 'Password Rule Settings'
                 Values = @(
-                    [PSCustomObject]@{ Name = 'enableBannedPasswordCheckOnPremises'; Value = 'true' }
+                    [PSCustomObject]@{ Name = 'enableBannedPasswordCheck'; Value = 'true' }
                     [PSCustomObject]@{ Name = 'banPasswordList';                     Value = ''     }
                 )
             })
@@ -196,7 +196,7 @@ Describe 'Get-CustomBannedPasswordFindings' {
             @([PSCustomObject]@{
                 DisplayName = 'Password Rule Settings'
                 Values = @(
-                    [PSCustomObject]@{ Name = 'enableBannedPasswordCheckOnPremises'; Value = 'true'          }
+                    [PSCustomObject]@{ Name = 'enableBannedPasswordCheck'; Value = 'true'          }
                     [PSCustomObject]@{ Name = 'banPasswordList';                     Value = 'contoso,acme'  }
                 )
             })
