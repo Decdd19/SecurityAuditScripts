@@ -130,3 +130,78 @@ Describe 'Get-SmartLockoutFindings' {
         $findings | Should -BeNullOrEmpty
     }
 }
+
+# ---------------------------------------------------------------------------
+# Get-SecurityDefaultsFindings
+# ---------------------------------------------------------------------------
+Describe 'Get-SecurityDefaultsFindings' {
+    It 'emits EP-04 HIGH finding when security defaults are disabled' {
+        Mock Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy {
+            [PSCustomObject]@{ IsEnabled = $false }
+        }
+        $findings = Get-SecurityDefaultsFindings
+        $findings | Should -HaveCount 1
+        $findings[0].FindingType | Should -Be 'SecurityDefaultsDisabled'
+        $findings[0].Severity    | Should -Be 'HIGH'
+        $findings[0].Score       | Should -Be 7
+    }
+
+    It 'emits no finding when security defaults are enabled' {
+        Mock Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy {
+            [PSCustomObject]@{ IsEnabled = $true }
+        }
+        $findings = Get-SecurityDefaultsFindings
+        $findings | Should -BeNullOrEmpty
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Get-CustomBannedPasswordFindings
+# ---------------------------------------------------------------------------
+Describe 'Get-CustomBannedPasswordFindings' {
+    It 'emits EP-05 LOW finding when banned password check is disabled' {
+        Mock Get-MgBetaDirectorySetting {
+            @([PSCustomObject]@{
+                DisplayName = 'Password Rule Settings'
+                Values = @(
+                    [PSCustomObject]@{ Name = 'enableBannedPasswordCheckOnPremises'; Value = 'false'   }
+                    [PSCustomObject]@{ Name = 'banPasswordList';                     Value = 'contoso' }
+                )
+            })
+        }
+        $findings = Get-CustomBannedPasswordFindings
+        $findings | Should -HaveCount 1
+        $findings[0].FindingType | Should -Be 'CustomBannedPasswordsAbsent'
+        $findings[0].Severity    | Should -Be 'LOW'
+        $findings[0].Score       | Should -Be 2
+    }
+
+    It 'emits EP-05 LOW finding when banned password list is empty' {
+        Mock Get-MgBetaDirectorySetting {
+            @([PSCustomObject]@{
+                DisplayName = 'Password Rule Settings'
+                Values = @(
+                    [PSCustomObject]@{ Name = 'enableBannedPasswordCheckOnPremises'; Value = 'true' }
+                    [PSCustomObject]@{ Name = 'banPasswordList';                     Value = ''     }
+                )
+            })
+        }
+        $findings = Get-CustomBannedPasswordFindings
+        $findings | Should -HaveCount 1
+        $findings[0].FindingType | Should -Be 'CustomBannedPasswordsAbsent'
+    }
+
+    It 'emits no finding when banned password check is enabled with a list' {
+        Mock Get-MgBetaDirectorySetting {
+            @([PSCustomObject]@{
+                DisplayName = 'Password Rule Settings'
+                Values = @(
+                    [PSCustomObject]@{ Name = 'enableBannedPasswordCheckOnPremises'; Value = 'true'          }
+                    [PSCustomObject]@{ Name = 'banPasswordList';                     Value = 'contoso,acme'  }
+                )
+            })
+        }
+        $findings = Get-CustomBannedPasswordFindings
+        $findings | Should -BeNullOrEmpty
+    }
+}

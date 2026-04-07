@@ -159,6 +159,74 @@ function Get-SmartLockoutFindings {
     return $findings
 }
 
+function Get-SecurityDefaultsFindings {
+    $findings = [System.Collections.Generic.List[PSCustomObject]]::new()
+    try {
+        $policy = Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy
+        if ($policy -and $policy.IsEnabled -eq $false) {
+            $findings.Add([PSCustomObject]@{
+                FindingType    = 'SecurityDefaultsDisabled'
+                Domain         = 'tenant'
+                Detail         = 'Security defaults are disabled'
+                Severity       = 'HIGH'
+                CisControl     = 'CIS 5.2'
+                Score          = 7
+                Recommendation = "Enable security defaults or replace with Conditional Access: Azure Portal → Microsoft Entra ID → Properties → Manage security defaults → Enable. If using Conditional Access, ensure equivalent policies cover MFA for all users, blocking legacy auth, and protecting privileged access."
+            })
+        }
+    } catch {
+        Write-Warning "Could not check security defaults: $_"
+    }
+    return $findings
+}
+
+function Get-CustomBannedPasswordFindings {
+    $findings = [System.Collections.Generic.List[PSCustomObject]]::new()
+    try {
+        $settings    = @(Get-MgBetaDirectorySetting)
+        $pwdSettings = $settings | Where-Object { $_.DisplayName -eq 'Password Rule Settings' }
+
+        if (-not $pwdSettings) {
+            $findings.Add([PSCustomObject]@{
+                FindingType    = 'CustomBannedPasswordsAbsent'
+                Domain         = 'tenant'
+                Detail         = 'Password protection settings not configured'
+                Severity       = 'LOW'
+                CisControl     = 'CIS 5.2'
+                Score          = 2
+                Recommendation = "Configure custom banned passwords: Azure Portal → Microsoft Entra ID → Security → Authentication methods → Password protection → Enable custom banned passwords → add organisation-specific terms (company name, product names, locations)."
+            })
+            return $findings
+        }
+
+        $values = @{}
+        foreach ($v in $pwdSettings.Values) { $values[$v.Name] = $v.Value }
+
+        $checkEnabled = $values['enableBannedPasswordCheckOnPremises']
+        $banList      = $values['banPasswordList']
+
+        if ($checkEnabled -eq 'false' -or [string]::IsNullOrWhiteSpace($banList)) {
+            $detail = if ($checkEnabled -eq 'false') {
+                'Custom banned password check disabled'
+            } else {
+                'Custom banned password list is empty'
+            }
+            $findings.Add([PSCustomObject]@{
+                FindingType    = 'CustomBannedPasswordsAbsent'
+                Domain         = 'tenant'
+                Detail         = $detail
+                Severity       = 'LOW'
+                CisControl     = 'CIS 5.2'
+                Score          = 2
+                Recommendation = "Configure custom banned passwords: Azure Portal → Microsoft Entra ID → Security → Authentication methods → Password protection → Enable custom banned passwords → add organisation-specific terms (company name, product names, locations)."
+            })
+        }
+    } catch {
+        Write-Warning "Could not check custom banned password settings: $_"
+    }
+    return $findings
+}
+
 # ---------------------------------------------------------------------------
 # Main — skipped when dot-sourced (Pester dot-sources with '.')
 # ---------------------------------------------------------------------------
