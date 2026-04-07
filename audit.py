@@ -186,6 +186,7 @@ WINDOWS_PS1: Dict[str, str] = {
     "subscription": "Azure/subscription-auditor/subscription_auditor.ps1",
     "entra":        "Azure/entra-auditor/entra_auditor.ps1",
     "entrapwd":     "Azure/entrapwd-auditor/entrapwd_auditor.ps1",
+    "hybrid":       "Azure/hybrid-auditor/hybrid_auditor.ps1",
     "defender":     "Azure/defender-auditor/defender_auditor.ps1",
     "m365":         "M365/m365-auditor/m365_auditor.ps1",
     "sharepoint":   "M365/sharepoint-auditor/sharepoint_auditor.ps1",

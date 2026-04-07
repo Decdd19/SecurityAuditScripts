@@ -124,6 +124,7 @@ $AzureAuditors = @(
     @{ Name = 'subscription'; Script = 'Azure\subscription-auditor\subscription_auditor.ps1'; Prefix = 'subscription_report'; AllSubs = $true  }
     @{ Name = 'entra';        Script = 'Azure\entra-auditor\entra_auditor.ps1';               Prefix = 'entra_report';        AllSubs = $true  }
     @{ Name = 'entrapwd';     Script = 'Azure\entrapwd-auditor\entrapwd_auditor.ps1';          Prefix = 'entrapwd_report';     AllSubs = $false }
+    @{ Name = 'hybrid';       Script = 'Azure\hybrid-auditor\hybrid_auditor.ps1';             Prefix = 'hybrid_report';       AllSubs = $false }
     @{ Name = 'defender';     Script = 'Azure\defender-auditor\defender_auditor.ps1';         Prefix = 'defender_report';     AllSubs = $true  }
     @{ Name = 'policy';       Script = 'Azure\policy-auditor\azpolicy_auditor.ps1';           Prefix = 'policy_report';       AllSubs = $true  }
     @{ Name = 'azbackup';     Script = 'Azure\backup-auditor\azbackup_auditor.ps1';           Prefix = 'azbackup_report';     AllSubs = $true  }

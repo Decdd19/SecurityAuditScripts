@@ -60,6 +60,7 @@ KNOWN_PATTERNS = [
     "kms_report.json",
     "elb_report.json",
     # Additional Azure
+    "hybrid_report.json",
     "defender_report.json",
     # Email security
     "email_report.json",
@@ -97,6 +98,7 @@ AZURE_WINDOWS_PATTERNS = [
     "subscription_report.json",
     "entra_report.json",
     "entrapwd_report.json",
+    "hybrid_report.json",
     "defender_report.json",
     "ad_report.json",
     "localuser_report.json",
@@ -155,6 +157,7 @@ PILLAR_LABELS = {
     "patch": "Linux Patch Status",
     "kms": "AWS KMS Keys",
     "elb": "Load Balancers",
+    "hybrid":   "Hybrid Identity (AAD Connect)",
     "defender": "Defender for Cloud",
     "email": "Email Security (SPF/DKIM/DMARC)",
     "ssl":   "SSL/TLS Certificates",
