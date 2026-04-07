@@ -42,6 +42,7 @@ KNOWN_PATTERNS = [
     "activitylog_report.json",
     "subscription_report.json",
     "entra_report.json",
+    "entrapwd_report.json",
     # Windows on-prem
     "ad_report.json",
     "localuser_report.json",
@@ -93,6 +94,7 @@ AZURE_WINDOWS_PATTERNS = [
     "activitylog_report.json",
     "subscription_report.json",
     "entra_report.json",
+    "entrapwd_report.json",
     "defender_report.json",
     "ad_report.json",
     "localuser_report.json",
@@ -131,6 +133,7 @@ PILLAR_LABELS = {
     "activitylog": "Azure Activity Log",
     "subscription": "Azure Subscription",
     "entra": "Azure Entra ID",
+    "entrapwd": "Entra Password Policy",
     "m365": "M365 / Exchange Online",
     "sharepoint": "SharePoint Online",
     "teams": "Microsoft Teams",
