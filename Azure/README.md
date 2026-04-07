@@ -7,17 +7,34 @@ PowerShell scripts for auditing Azure infrastructure security posture.
 ## Prerequisites
 
 ```powershell
-# Install core Az modules
+# Install all Az modules needed across auditors
 Install-Module Az.Accounts, Az.Resources, Az.Network, Az.Storage, Az.Monitor, Az.Security, Az.KeyVault -Scope CurrentUser
-
-# Install Graph modules (required by entra-auditor and subscription-auditor)
-Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.Graph.Identity.Governance -Scope CurrentUser
 
 # Authenticate
 Connect-AzAccount
+```
 
-# For entra-auditor and subscription-auditor, also authenticate to Graph:
-Connect-MgGraph -Scopes "UserAuthenticationMethod.Read.All","RoleManagement.Read.Directory"
+### Per-Auditor Module Requirements
+
+Some auditors need additional modules beyond the base Az install:
+
+| Auditor | Extra modules | Graph scopes needed |
+|---------|--------------|---------------------|
+| `entra-auditor` | `Microsoft.Graph.Authentication`, `Microsoft.Graph.Users` | `UserAuthenticationMethod.Read.All`, `RoleManagement.Read.Directory` |
+| `entrapwd-auditor` | `Microsoft.Graph.Authentication`, `Microsoft.Graph.Identity.SignIns`, `Microsoft.Graph.Identity.DirectoryManagement`, `Microsoft.Graph.Beta.Identity.DirectoryManagement` | `Policy.Read.All`, `Directory.Read.All` |
+| `hybrid-auditor` | `Microsoft.Graph.Authentication`, `Microsoft.Graph.Identity.DirectoryManagement` | `Organization.Read.All`, `OnPremDirectorySynchronization.Read.All` |
+| `subscription-auditor` | `Az.Security`, `Microsoft.Graph.Authentication`, `Microsoft.Graph.Identity.Governance` | `UserAuthenticationMethod.Read.All`, `RoleManagement.Read.Directory` |
+| `activitylog-auditor` | `Az.Monitor` (+ optional `Az.OperationalInsights` for LA workspace retention) | — |
+| `storage-auditor` | `Az.Storage` | — |
+| `nsg-auditor` | `Az.Network` | — |
+| `keyvault-auditor` | `Az.KeyVault` | — |
+| `defender-auditor` | `Az.Security`, `Az.Resources` | — |
+| `policy-auditor` | `Az.Resources` | — |
+| `backup-auditor` | `Az.RecoveryServices` | — |
+
+```powershell
+# For auditors using Microsoft Graph — connect after Connect-AzAccount:
+Connect-MgGraph -Scopes "UserAuthenticationMethod.Read.All","RoleManagement.Read.Directory","Policy.Read.All","Directory.Read.All","Organization.Read.All","OnPremDirectorySynchronization.Read.All"
 ```
 
 ---

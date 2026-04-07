@@ -98,3 +98,143 @@ pytest AWS/ -v
 - Designed to run in **AWS CloudShell** but work anywhere with valid credentials
 - Multi-region scripts enumerate all 18 standard AWS regions by default
 - Each finding includes `flags` (emoji-prefixed observations) and `remediations` (actionable steps) for use with the [executive summary tool](../tools/)
+
+---
+
+## IAM Permissions
+
+Minimum read-only IAM permissions required per auditor. All use `"Resource": "*"` and `"Effect": "Allow"`.
+
+<details>
+<summary>IAM Privilege Mapper</summary>
+
+```json
+["iam:List*", "iam:Get*", "sts:GetCallerIdentity",
+ "organizations:ListPoliciesForTarget", "organizations:DescribePolicy"]
+```
+> `organizations:*` optional — needed only for SCP analysis; skipped gracefully if absent.
+</details>
+
+<details>
+<summary>S3 Auditor</summary>
+
+```json
+["s3:ListAllMyBuckets", "s3:GetBucket*", "s3:GetPublicAccessBlock",
+ "s3:ListBucket", "sts:GetCallerIdentity"]
+```
+</details>
+
+<details>
+<summary>CloudTrail Auditor</summary>
+
+```json
+["cloudtrail:DescribeTrails", "cloudtrail:GetTrailStatus",
+ "cloudtrail:GetEventSelectors", "s3:GetPublicAccessBlock",
+ "sts:GetCallerIdentity"]
+```
+</details>
+
+<details>
+<summary>Security Group Auditor</summary>
+
+```json
+["ec2:DescribeSecurityGroups", "ec2:DescribeRegions",
+ "ec2:DescribeNetworkInterfaces", "sts:GetCallerIdentity"]
+```
+</details>
+
+<details>
+<summary>Root Account Auditor</summary>
+
+```json
+["iam:GetAccountSummary", "iam:GetAccountPasswordPolicy",
+ "iam:GenerateCredentialReport", "iam:GetCredentialReport",
+ "iam:ListVirtualMFADevices", "sts:GetCallerIdentity",
+ "organizations:DescribeOrganization", "support:DescribeSeverityLevels",
+ "account:GetAlternateContact"]
+```
+> `support:*` and `account:*` optional — handled gracefully if absent.
+</details>
+
+<details>
+<summary>EC2 Auditor</summary>
+
+```json
+["ec2:DescribeInstances", "ec2:DescribeSnapshots", "ec2:DescribeVolumes",
+ "ec2:DescribeVpcs", "ec2:DescribeRegions", "sts:GetCallerIdentity"]
+```
+</details>
+
+<details>
+<summary>RDS Auditor</summary>
+
+```json
+["rds:DescribeDBInstances", "rds:DescribeDBClusters",
+ "ec2:DescribeRegions", "sts:GetCallerIdentity"]
+```
+</details>
+
+<details>
+<summary>GuardDuty Auditor</summary>
+
+```json
+["guardduty:ListDetectors", "guardduty:GetDetector",
+ "guardduty:ListFindings", "guardduty:GetFindings",
+ "guardduty:GetFindingsStatistics", "ec2:DescribeRegions",
+ "sts:GetCallerIdentity"]
+```
+</details>
+
+<details>
+<summary>VPC Flow Logs Auditor</summary>
+
+```json
+["ec2:DescribeVpcs", "ec2:DescribeFlowLogs", "ec2:DescribeRegions",
+ "logs:DescribeLogGroups", "sts:GetCallerIdentity"]
+```
+</details>
+
+<details>
+<summary>Lambda Auditor</summary>
+
+```json
+["lambda:ListFunctions", "lambda:GetFunctionUrlConfig",
+ "lambda:GetFunctionConcurrency", "iam:ListAttachedRolePolicies",
+ "iam:ListRolePolicies", "iam:GetRolePolicy",
+ "ec2:DescribeRegions", "sts:GetCallerIdentity"]
+```
+</details>
+
+<details>
+<summary>Security Hub Auditor</summary>
+
+```json
+["securityhub:DescribeHub", "securityhub:GetFindings",
+ "securityhub:GetEnabledStandards", "securityhub:DescribeStandardsControls",
+ "ec2:DescribeRegions", "sts:GetCallerIdentity"]
+```
+</details>
+
+<details>
+<summary>KMS Auditor</summary>
+
+```json
+["kms:ListKeys", "kms:DescribeKey", "kms:GetKeyRotationStatus",
+ "kms:GetKeyPolicy", "kms:ListAliases",
+ "ec2:DescribeRegions", "sts:GetCallerIdentity"]
+```
+</details>
+
+<details>
+<summary>ELB Auditor</summary>
+
+```json
+["elasticloadbalancing:DescribeLoadBalancers",
+ "elasticloadbalancing:DescribeListeners",
+ "elasticloadbalancing:DescribeRules",
+ "elasticloadbalancing:DescribeTargetGroups",
+ "elasticloadbalancing:DescribeLoadBalancerAttributes",
+ "wafv2:GetWebACLForResource", "ec2:DescribeRegions",
+ "sts:GetCallerIdentity"]
+```
+</details>

@@ -39,6 +39,7 @@ OnPrem/
 | [bitlocker_auditor.ps1](./Windows/bitlocker-auditor/) | Windows | No | PowerShell |
 | [laps_auditor.ps1](./Windows/laps-auditor/) | Windows | Yes (domain-joined) | PowerShell |
 | [winpatch_auditor.ps1](./Windows/winpatch-auditor/) | Windows | No | PowerShell |
+| [netexpose_auditor.ps1](./Windows/netexpose-auditor/) | Windows (LAN assessor) | No | PowerShell |
 | [linux_user_auditor.py](./Linux/linux-user-auditor/) | Linux | No | Python |
 | [linux_firewall_auditor.py](./Linux/linux-firewall-auditor/) | Linux | No | Python |
 | [linux_sysctl_auditor.py](./Linux/linux-sysctl-auditor/) | Linux | No | Python |
