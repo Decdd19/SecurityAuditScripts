@@ -72,3 +72,61 @@ Describe 'Get-SsprFindings' {
         $findings | Should -BeNullOrEmpty
     }
 }
+
+# ---------------------------------------------------------------------------
+# Get-SmartLockoutFindings
+# ---------------------------------------------------------------------------
+Describe 'Get-SmartLockoutFindings' {
+    It 'emits EP-03 MEDIUM finding when lockoutThreshold exceeds 10' {
+        Mock Get-MgBetaDirectorySetting {
+            @([PSCustomObject]@{
+                DisplayName = 'Password Rule Settings'
+                Values = @(
+                    [PSCustomObject]@{ Name = 'lockoutThreshold';         Value = '15' }
+                    [PSCustomObject]@{ Name = 'lockoutDurationInSeconds'; Value = '60' }
+                )
+            })
+        }
+        $findings = Get-SmartLockoutFindings
+        $f = $findings | Where-Object { $_.Detail -match 'threshold' }
+        $f              | Should -Not -BeNullOrEmpty
+        $f.FindingType  | Should -Be 'SmartLockoutPermissive'
+        $f.Severity     | Should -Be 'MEDIUM'
+    }
+
+    It 'emits EP-03 MEDIUM finding when lockoutDurationInSeconds is under 60' {
+        Mock Get-MgBetaDirectorySetting {
+            @([PSCustomObject]@{
+                DisplayName = 'Password Rule Settings'
+                Values = @(
+                    [PSCustomObject]@{ Name = 'lockoutThreshold';         Value = '10' }
+                    [PSCustomObject]@{ Name = 'lockoutDurationInSeconds'; Value = '30' }
+                )
+            })
+        }
+        $findings = Get-SmartLockoutFindings
+        $f = $findings | Where-Object { $_.Detail -match 'duration' }
+        $f             | Should -Not -BeNullOrEmpty
+        $f.FindingType | Should -Be 'SmartLockoutPermissive'
+    }
+
+    It 'emits no finding when threshold and duration are within bounds' {
+        Mock Get-MgBetaDirectorySetting {
+            @([PSCustomObject]@{
+                DisplayName = 'Password Rule Settings'
+                Values = @(
+                    [PSCustomObject]@{ Name = 'lockoutThreshold';         Value = '5'   }
+                    [PSCustomObject]@{ Name = 'lockoutDurationInSeconds'; Value = '120' }
+                )
+            })
+        }
+        $findings = Get-SmartLockoutFindings
+        $findings | Should -BeNullOrEmpty
+    }
+
+    It 'emits no finding when password rule settings are not configured' {
+        Mock Get-MgBetaDirectorySetting { @() }
+        $findings = Get-SmartLockoutFindings
+        $findings | Should -BeNullOrEmpty
+    }
+}

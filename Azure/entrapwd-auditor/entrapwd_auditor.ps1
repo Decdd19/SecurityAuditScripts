@@ -118,6 +118,47 @@ function Get-SsprFindings {
     return $findings
 }
 
+function Get-SmartLockoutFindings {
+    $findings = [System.Collections.Generic.List[PSCustomObject]]::new()
+    try {
+        $settings    = @(Get-MgBetaDirectorySetting)
+        $pwdSettings = $settings | Where-Object { $_.DisplayName -eq 'Password Rule Settings' }
+        if (-not $pwdSettings) { return $findings }
+
+        $values = @{}
+        foreach ($v in $pwdSettings.Values) { $values[$v.Name] = $v.Value }
+
+        $threshold = [int]($values['lockoutThreshold']         ?? 10)
+        $duration  = [int]($values['lockoutDurationInSeconds'] ?? 60)
+
+        if ($threshold -gt 10) {
+            $findings.Add([PSCustomObject]@{
+                FindingType    = 'SmartLockoutPermissive'
+                Domain         = 'tenant'
+                Detail         = "Lockout threshold: $threshold (recommended: ≤10)"
+                Severity       = 'MEDIUM'
+                CisControl     = 'CIS 5.2'
+                Score          = 4
+                Recommendation = "Reduce smart lockout threshold: Azure Portal → Microsoft Entra ID → Security → Authentication methods → Password protection → Lockout threshold → set to 10 or lower."
+            })
+        }
+        if ($duration -lt 60) {
+            $findings.Add([PSCustomObject]@{
+                FindingType    = 'SmartLockoutPermissive'
+                Domain         = 'tenant'
+                Detail         = "Lockout duration: ${duration}s (recommended: ≥60s)"
+                Severity       = 'MEDIUM'
+                CisControl     = 'CIS 5.2'
+                Score          = 4
+                Recommendation = "Increase smart lockout duration: Azure Portal → Microsoft Entra ID → Security → Authentication methods → Password protection → Lockout duration in seconds → set to 60 or higher."
+            })
+        }
+    } catch {
+        Write-Warning "Could not check smart lockout settings: $_"
+    }
+    return $findings
+}
+
 # ---------------------------------------------------------------------------
 # Main — skipped when dot-sourced (Pester dot-sources with '.')
 # ---------------------------------------------------------------------------
