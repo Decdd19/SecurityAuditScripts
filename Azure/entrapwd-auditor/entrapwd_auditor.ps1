@@ -75,6 +75,28 @@ function Set-RestrictedPermissions {
 }
 
 # ---------------------------------------------------------------------------
+# Audit functions
+# ---------------------------------------------------------------------------
+function Get-PasswordExpiryFindings {
+    $findings = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $domains = @(Get-MgDomain)
+    foreach ($domain in $domains) {
+        if ($null -ne $domain.PasswordValidityPeriodInDays -and $domain.PasswordValidityPeriodInDays -ne 0) {
+            $findings.Add([PSCustomObject]@{
+                FindingType    = 'PasswordExpiryEnabled'
+                Domain         = $domain.Id
+                Detail         = "$($domain.Id): $($domain.PasswordValidityPeriodInDays) days"
+                Severity       = 'MEDIUM'
+                CisControl     = 'CIS 5.2'
+                Score          = 4
+                Recommendation = "Disable password expiry: Azure Portal → Microsoft Entra ID → Password reset → Properties → Password expiry policy. NIST SP 800-63B recommends removing expiry when MFA is enforced — frequent rotation drives weak, predictable passwords."
+            })
+        }
+    }
+    return $findings
+}
+
+# ---------------------------------------------------------------------------
 # Main — skipped when dot-sourced (Pester dot-sources with '.')
 # ---------------------------------------------------------------------------
 if ($MyInvocation.InvocationName -ne '.') {
