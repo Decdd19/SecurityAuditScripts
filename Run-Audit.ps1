@@ -139,7 +139,7 @@ $M365Auditors = @(
 $WindowsAuditors = @(
     @{ Name = 'laps';         Script = 'OnPrem\Windows\laps-auditor\laps_auditor.ps1';               Prefix = 'laps_report';         AllSubs = $false }
     @{ Name = 'winpatch';     Script = 'OnPrem\Windows\winpatch-auditor\winpatch_auditor.ps1';        Prefix = 'winpatch_report';     AllSubs = $false }
-    @{ Name = 'netexpose';    Script = 'OnPrem\Windows\netexpose-auditor\netexpose_auditor.ps1';      Prefix = 'netexpose_report';    AllSubs = $false }
+    # netexpose requires -Target (mandatory); run standalone: .\netexpose_auditor.ps1 -Target 192.168.1.0/24
 )
 
 # ── Build run list ────────────────────────────────────────────────────────────
