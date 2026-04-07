@@ -48,3 +48,27 @@ Describe 'Get-PasswordExpiryFindings' {
         $findings[0].Domain | Should -Be 'a.com'
     }
 }
+
+# ---------------------------------------------------------------------------
+# Get-SsprFindings
+# ---------------------------------------------------------------------------
+Describe 'Get-SsprFindings' {
+    It 'emits EP-02 HIGH finding when SSPR is disabled' {
+        Mock Invoke-MgGraphRequest {
+            @{ defaultUserRolePermissions = @{ allowedToUseSSPR = $false } }
+        }
+        $findings = Get-SsprFindings
+        $findings | Should -HaveCount 1
+        $findings[0].FindingType | Should -Be 'SsprDisabled'
+        $findings[0].Severity    | Should -Be 'HIGH'
+        $findings[0].Score       | Should -Be 6
+    }
+
+    It 'emits no finding when SSPR is enabled' {
+        Mock Invoke-MgGraphRequest {
+            @{ defaultUserRolePermissions = @{ allowedToUseSSPR = $true } }
+        }
+        $findings = Get-SsprFindings
+        $findings | Should -BeNullOrEmpty
+    }
+}

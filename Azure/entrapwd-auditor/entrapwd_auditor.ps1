@@ -96,6 +96,28 @@ function Get-PasswordExpiryFindings {
     return $findings
 }
 
+function Get-SsprFindings {
+    $findings = [System.Collections.Generic.List[PSCustomObject]]::new()
+    try {
+        $policy = Invoke-MgGraphRequest -Uri 'https://graph.microsoft.com/v1.0/policies/authorizationPolicy' -Method GET
+        $allowedToUseSSPR = $policy.defaultUserRolePermissions.allowedToUseSSPR
+        if ($allowedToUseSSPR -eq $false) {
+            $findings.Add([PSCustomObject]@{
+                FindingType    = 'SsprDisabled'
+                Domain         = 'tenant'
+                Detail         = 'Self-service password reset is disabled for all users'
+                Severity       = 'HIGH'
+                CisControl     = 'CIS 5.2'
+                Score          = 6
+                Recommendation = "Enable SSPR: Azure Portal → Microsoft Entra ID → Password reset → Properties → Self-service password reset enabled → All. Configure at least 2 authentication methods (mobile app, email, phone)."
+            })
+        }
+    } catch {
+        Write-Warning "Could not check SSPR policy: $_"
+    }
+    return $findings
+}
+
 # ---------------------------------------------------------------------------
 # Main — skipped when dot-sourced (Pester dot-sources with '.')
 # ---------------------------------------------------------------------------
