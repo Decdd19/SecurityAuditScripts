@@ -77,13 +77,13 @@ Grade logic lives in [`scoring.py`](../scoring.py) and is unit-tested in [`tests
 
 The tool auto-discovers any of these filenames in the input directory:
 
-**AWS (13):** `s3_report.json`, `sg_report.json`, `cloudtrail_report.json`, `root_report.json`, `iam_report.json`, `ec2_report.json`, `rds_report.json`, `guardduty_report.json`, `vpcflowlogs_report.json`, `lambda_report.json`, `securityhub_report.json`, `kms_report.json`, `elb_report.json`
+**AWS (15):** `s3_report.json`, `sg_report.json`, `cloudtrail_report.json`, `root_report.json`, `iam_report.json`, `ec2_report.json`, `rds_report.json`, `guardduty_report.json`, `vpcflowlogs_report.json`, `lambda_report.json`, `securityhub_report.json`, `kms_report.json`, `elb_report.json`, `config_report.json`, `backup_report.json`
 
-**Azure (7):** `keyvault_report.json`, `storage_report.json`, `nsg_report.json`, `activitylog_report.json`, `subscription_report.json`, `entra_report.json`, `defender_report.json`
+**Azure (11):** `keyvault_report.json`, `storage_report.json`, `nsg_report.json`, `activitylog_report.json`, `subscription_report.json`, `entra_report.json`, `entrapwd_report.json`, `hybrid_report.json`, `defender_report.json`, `policy_report.json`, `azbackup_report.json`
 
-**M365:** `m365_report.json`
+**M365 (5):** `m365_report.json`, `sharepoint_report.json`, `teams_report.json`, `intune_report.json`, `exchange_report.json`
 
-**On-Premises — Windows (6):** `ad_report.json`, `localuser_report.json`, `winfirewall_report.json`, `smbsigning_report.json`, `auditpolicy_report.json`, `bitlocker_report.json`
+**On-Premises — Windows (10):** `ad_report.json`, `localuser_report.json`, `winfirewall_report.json`, `smbsigning_report.json`, `auditpolicy_report.json`, `bitlocker_report.json`, `laps_report.json`, `winpatch_report.json`, `mde_report.json`, `netexpose_report.json`
 
 **On-Premises — Linux (5):** `user_report.json`, `fw_report.json`, `sysctl_report.json`, `patch_report.json`, `ssh_report.json`
 
@@ -121,9 +121,9 @@ Creates: auditor stub + `tests/` directory, inserts `AUDITOR_MAP` entry in `audi
 ## Running Tests
 
 ```bash
-# All tests (Linux auditors + scoring + schema)
-pytest OnPrem/Linux/ tests/ -q --import-mode=importlib
+# All 934 tests from repo root (pytest.ini handles --import-mode=importlib)
+python3 -m pytest -q
 
-# Scoring + schema unit tests only
-pytest tests/test_scoring.py tests/test_schema.py -v
+# exec_summary + scoring + schema only
+python3 -m pytest tools/tests/ tests/test_scoring.py tests/test_schema.py tests/test_html_escaping.py -v
 ```

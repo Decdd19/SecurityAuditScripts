@@ -99,7 +99,9 @@ python3 audit.py --client "Acme Corp" --aws --regions eu-west-1 us-east-1
 python3 audit.py --client "Acme Corp" --email --ssl --http-headers --domain acme.ie
 ```
 
-**Flags:** `--aws` · `--linux` · `--all` · `--ssl` · `--http-headers` · `--email` · `--domain` · `--profile` · `--regions` · `--output` · `--workers` · `--open`
+**Flags:** `--aws` · `--linux` · `--all` · `--quick` · `--ssl` · `--http-headers` · `--email` · `--domain` · `--profile` · `--regions` · `--output` · `--workers` · `--open`
+
+> `--quick` triage mode: restricts `--aws`/`--linux`/`--all` to the top-5 priority auditors per platform for time-constrained engagements.
 
 > Auto-discovers new `*_auditor.py` scripts — no manual registration needed. Use `tools/add_auditor.py` to scaffold new auditors.
 
@@ -113,7 +115,9 @@ Runs Azure, M365, and Windows on-premises auditors sequentially, then generates 
 .\Run-Audit.ps1 -Client "Acme Corp" -All -OutputDir C:\Reports -Open
 ```
 
-**Flags:** `-Azure` (11) · `-M365` (6) · `-Windows` (8) · `-All` · `-AllSubscriptions` · `-OutputDir` · `-SkipSummary` · `-Open`
+**Flags:** `-Azure` (11) · `-M365` (6) · `-Windows` (8) · `-All` · `-Quick` · `-AllSubscriptions` · `-OutputDir` · `-SkipSummary` · `-Open`
+
+> `-Quick` triage mode: restricts `-Azure`/`-M365`/`-Windows`/`-All` to the top-priority auditors per platform (Azure: 5, M365: 3, Windows: 5).
 
 ---
 
