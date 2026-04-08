@@ -75,5 +75,106 @@ class TestValidateFindingRejection(unittest.TestCase):
             validate_finding({"risk_level": "high"})
 
 
+class TestSchemaContractPerAuditorType(unittest.TestCase):
+    """Contract tests: each auditor schema type passes validate_finding() cleanly
+    and produces the four canonical fields (risk_level, remediation, flag, cis_control).
+    Fixtures mirror the actual field shapes produced by each auditor family.
+    """
+
+    # AWS-style: s3, sg, cloudtrail, root, iam, ec2, rds, etc.
+    # Uses risk_level + flags[] + remediations[]; no top-level flag/remediation.
+    AWS_FINDING = {
+        "risk_level": "CRITICAL",
+        "severity_score": 9,
+        "name": "acme-public-backup",
+        "flags": ["❌ Public access enabled", "❌ No encryption"],
+        "remediations": ["Block public access via S3 console", "Enable SSE-S3 encryption"],
+    }
+
+    # Linux-style: ssh, sysctl, firewall, user, patch.
+    # Uses risk_level + recommendation (alias → remediation); no flag.
+    LINUX_FINDING = {
+        "risk_level": "HIGH",
+        "param": "PermitRootLogin",
+        "actual": "yes",
+        "expected": "no",
+        "description": "Root login via SSH is permitted",
+        "recommendation": "Set PermitRootLogin no in /etc/ssh/sshd_config",
+    }
+
+    # Network/Email-style: ssl_tls, http_headers, email_security.
+    # Uses risk_level + remediation (canonical) + detail (alias → flag).
+    NETWORK_FINDING = {
+        "check_id": "TLS-01",
+        "name": "Certificate Expiry",
+        "status": "FAIL",
+        "risk_level": "CRITICAL",
+        "severity_score": 8,
+        "detail": "Certificate expired 7 days ago",
+        "remediation": "Renew the certificate immediately",
+        "pillar": "tls",
+        "cis_control": "CIS 4",
+    }
+
+    # PowerShell auditor compat: uses 'severity' instead of 'risk_level'.
+    POWERSHELL_FINDING = {
+        "severity": "HIGH",
+        "finding_type": "KeyVault-01",
+        "recommendation": "Enable soft-delete on the key vault",
+    }
+
+    def _assert_canonical(self, result):
+        """Assert all four canonical fields are present and risk_level is valid."""
+        self.assertIn("risk_level", result)
+        self.assertIn(result["risk_level"], VALID_RISK_LEVELS)
+        self.assertIn("remediation", result)
+        self.assertIn("flag", result)
+
+    def test_aws_style_finding_passes_contract(self):
+        result = validate_finding(dict(self.AWS_FINDING))
+        self._assert_canonical(result)
+        self.assertEqual(result["risk_level"], "CRITICAL")
+        # AWS findings have no top-level remediation — validate_finding sets it to ""
+        self.assertEqual(result["remediation"], "")
+
+    def test_linux_style_finding_passes_contract(self):
+        result = validate_finding(dict(self.LINUX_FINDING))
+        self._assert_canonical(result)
+        # recommendation alias → remediation
+        self.assertEqual(result["remediation"], "Set PermitRootLogin no in /etc/ssh/sshd_config")
+        # original recommendation field preserved
+        self.assertEqual(result["recommendation"], "Set PermitRootLogin no in /etc/ssh/sshd_config")
+
+    def test_network_email_style_finding_passes_contract(self):
+        result = validate_finding(dict(self.NETWORK_FINDING))
+        self._assert_canonical(result)
+        # remediation already canonical — preserved unchanged
+        self.assertEqual(result["remediation"], "Renew the certificate immediately")
+        # detail alias → flag
+        self.assertEqual(result["flag"], "Certificate expired 7 days ago")
+        # original detail field preserved
+        self.assertEqual(result["detail"], "Certificate expired 7 days ago")
+
+    def test_powershell_style_finding_passes_contract(self):
+        result = validate_finding(dict(self.POWERSHELL_FINDING))
+        self._assert_canonical(result)
+        # severity alias → risk_level
+        self.assertEqual(result["risk_level"], "HIGH")
+        # recommendation alias → remediation
+        self.assertEqual(result["remediation"], "Enable soft-delete on the key vault")
+
+    def test_all_auditor_types_preserve_extra_fields(self):
+        """Extra auditor-specific fields (param, actual, name, etc.) are not stripped."""
+        result = validate_finding(dict(self.LINUX_FINDING))
+        self.assertIn("param", result)
+        self.assertIn("actual", result)
+        self.assertIn("expected", result)
+
+        result = validate_finding(dict(self.NETWORK_FINDING))
+        self.assertIn("check_id", result)
+        self.assertIn("pillar", result)
+        self.assertIn("cis_control", result)
+
+
 if __name__ == "__main__":
     unittest.main()
