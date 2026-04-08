@@ -305,8 +305,7 @@ Describe 'Get-M365AdminRoleFindings' {
         Mock Get-MgDirectoryRoleMember {
             @([PSCustomObject]@{
                 Id                   = 'sp-1'
-                '@odata.type'        = '#microsoft.graph.servicePrincipal'
-                AdditionalProperties = @{}
+                AdditionalProperties = @{ '@odata.type' = '#microsoft.graph.servicePrincipal' }
             })
         }
 
