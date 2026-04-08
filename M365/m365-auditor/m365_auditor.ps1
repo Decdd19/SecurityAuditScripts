@@ -296,7 +296,8 @@ function Get-M365MfaCoverageFindings {
         $methods = @(Get-MgUserAuthenticationMethod -UserId $user.Id)
         # Password method is always present; any other method counts as MFA
         $mfaMethods = @($methods | Where-Object {
-            $_.AdditionalProperties['@odata.type'] -ne '#microsoft.graph.passwordAuthenticationMethod'
+            $t = if ($null -ne $_.PSObject.Properties['AdditionalProperties']) { $_.AdditionalProperties['@odata.type'] } else { $_.'@odata.type' }
+            $t -ne '#microsoft.graph.passwordAuthenticationMethod'
         })
         if ($mfaMethods.Count -eq 0) {
             $noMfaUsers.Add($user.UserPrincipalName)
@@ -344,7 +345,8 @@ function Get-M365AdminRoleFindings {
         $members = @(Get-MgDirectoryRoleMember -DirectoryRoleId $role.Id)
         foreach ($member in $members) {
             # Skip service principals — they're expected to hold app-level roles
-            if ($member.AdditionalProperties['@odata.type'] -eq '#microsoft.graph.servicePrincipal') { continue }
+            $memberType = if ($null -ne $member.PSObject.Properties['AdditionalProperties']) { $member.AdditionalProperties['@odata.type'] } else { $member.'@odata.type' }
+            if ($memberType -eq '#microsoft.graph.servicePrincipal') { continue }
 
             $upn = if ($member.AdditionalProperties -and $member.AdditionalProperties['userPrincipalName']) {
                 $member.AdditionalProperties['userPrincipalName']
