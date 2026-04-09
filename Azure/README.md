@@ -6,47 +6,110 @@ PowerShell scripts for auditing Azure infrastructure security posture.
 
 ## Prerequisites
 
-```powershell
-# Install all Az modules needed across auditors
-Install-Module Az.Accounts, Az.Resources, Az.Network, Az.Storage, Az.Monitor, Az.Security, Az.KeyVault -Scope CurrentUser
+### 1 — Install PowerShell 7
 
-# Authenticate
-Connect-AzAccount
+**Linux (Ubuntu/Debian via snap):**
+```bash
+snap install powershell --classic
 ```
 
-### Per-Auditor Module Requirements
+**macOS:**
+```bash
+brew install --cask powershell
+```
 
-Some auditors need additional modules beyond the base Az install:
+**Windows:** PowerShell 7 is pre-installed on modern systems. Download from [aka.ms/powershell](https://aka.ms/powershell) if needed.
 
-| Auditor | Extra modules | Graph scopes needed |
-|---------|--------------|---------------------|
-| `entra-auditor` | `Microsoft.Graph.Authentication`, `Microsoft.Graph.Users` | `UserAuthenticationMethod.Read.All`, `RoleManagement.Read.Directory` |
-| `entrapwd-auditor` | `Microsoft.Graph.Authentication`, `Microsoft.Graph.Identity.SignIns`, `Microsoft.Graph.Identity.DirectoryManagement`, `Microsoft.Graph.Beta.Identity.DirectoryManagement` | `Policy.Read.All`, `Directory.Read.All` |
-| `hybrid-auditor` | `Microsoft.Graph.Authentication`, `Microsoft.Graph.Identity.DirectoryManagement` | `Organization.Read.All`, `OnPremDirectorySynchronization.Read.All` |
-| `subscription-auditor` | `Az.Security`, `Microsoft.Graph.Authentication`, `Microsoft.Graph.Identity.Governance` | `UserAuthenticationMethod.Read.All`, `RoleManagement.Read.Directory` |
-| `activitylog-auditor` | `Az.Monitor` (+ optional `Az.OperationalInsights` for LA workspace retention) | — |
-| `storage-auditor` | `Az.Storage` | — |
-| `nsg-auditor` | `Az.Network` | — |
-| `keyvault-auditor` | `Az.KeyVault` | — |
-| `defender-auditor` | `Az.Security`, `Az.Resources` | — |
-| `policy-auditor` | `Az.Resources` | — |
-| `backup-auditor` | `Az.RecoveryServices` | — |
+---
+
+### 2 — Install Required Modules
+
+Run once in a `pwsh` session:
 
 ```powershell
-# For auditors using Microsoft Graph — connect after Connect-AzAccount:
-Connect-MgGraph -Scopes "UserAuthenticationMethod.Read.All","RoleManagement.Read.Directory","Policy.Read.All","Directory.Read.All","Organization.Read.All","OnPremDirectorySynchronization.Read.All"
+# Core Az modules
+Install-Module Az -Scope CurrentUser -Force -AllowClobber
+
+# Microsoft Graph modules
+Install-Module Microsoft.Graph -Scope CurrentUser -Force -AllowClobber
+Install-Module Microsoft.Graph.Beta.Identity.DirectoryManagement -Scope CurrentUser -Force -AllowClobber
+
+# Verify all required modules are present
+$required = @(
+    'Az.Accounts','Az.Monitor','Az.Storage','Az.Network','Az.Resources',
+    'Az.Security','Az.KeyVault','Az.RecoveryServices',
+    'Microsoft.Graph.Authentication','Microsoft.Graph.Users',
+    'Microsoft.Graph.Identity.Governance','Microsoft.Graph.Identity.SignIns',
+    'Microsoft.Graph.Identity.DirectoryManagement',
+    'Microsoft.Graph.Beta.Identity.DirectoryManagement'
+)
+$required | ForEach-Object {
+    $m = Get-Module -ListAvailable -Name $_ | Select-Object -First 1
+    if ($m) { Write-Host "OK  $_ $($m.Version)" } else { Write-Host "MISSING $_" }
+}
 ```
 
 ---
 
-## Orchestrator
+### 3 — Authenticate
 
-Use `Run-Audit.ps1` at the repo root to run all Azure auditors in one command:
+Two authentication prompts are required — one for Azure Resource Manager, one for Microsoft Graph. Both token caches are saved to disk (~1 hour lifetime), so you will only be prompted on the first run of the day or after token expiry.
 
 ```powershell
-.\Run-Audit.ps1 -Client "Acme Corp" -Azure
-.\Run-Audit.ps1 -Client "Acme Corp" -Azure -AllSubscriptions -Open
+# Azure Resource Manager (required for all Az.* auditors)
+Connect-AzAccount
+
+# Microsoft Graph (required for Entra, hybrid, entrapwd, subscription auditors)
+Connect-MgGraph -Scopes `
+    'User.Read.All','Directory.Read.All','Policy.Read.All',
+    'DeviceManagementManagedDevices.Read.All','DeviceManagementConfiguration.Read.All',
+    'Organization.Read.All','OnPremDirectorySynchronization.Read.All',
+    'RoleManagement.Read.Directory','UserAuthenticationMethod.Read.All','AuditLog.Read.All'
 ```
+
+---
+
+## Running All Azure Auditors (Recommended)
+
+Use the wrapper script at the repo root to authenticate and run all auditors in a single command:
+
+```bash
+# From repo root
+/snap/bin/pwsh -NoProfile -File run-my-audit.ps1
+```
+
+The `run-my-audit.ps1` script handles both auth prompts, then invokes `Run-Audit.ps1 -Azure`.
+
+To run Azure + M365 together:
+
+```powershell
+# From repo root (inside a pwsh session after auth)
+.\Run-Audit.ps1 -Client "Client Name" -Azure -M365 -Open
+.\Run-Audit.ps1 -Client "Client Name" -Azure -M365 -AllSubscriptions
+.\Run-Audit.ps1 -Client "Client Name" -Azure -M365 -Quick   # top-priority auditors only
+```
+
+Each auditor produces **JSON + CSV + HTML** output per pillar, plus a consolidated executive summary HTML.
+
+---
+
+## Per-Auditor Module Requirements
+
+| Auditor | Az modules | Graph modules |
+|---------|-----------|---------------|
+| `keyvault-auditor` | `Az.Accounts`, `Az.KeyVault` | — |
+| `storage-auditor` | `Az.Accounts`, `Az.Storage` | — |
+| `nsg-auditor` | `Az.Accounts`, `Az.Network` | — |
+| `activitylog-auditor` | `Az.Accounts`, `Az.Monitor` | — |
+| `subscription-auditor` | `Az.Accounts`, `Az.Resources`, `Az.Security` | `Authentication`, `Identity.Governance`, `Users` |
+| `entra-auditor` | `Az.Accounts`, `Az.Resources` | `Authentication`, `Users` |
+| `entrapwd-auditor` | — | `Authentication`, `Identity.SignIns`, `Identity.DirectoryManagement`, `Beta.Identity.DirectoryManagement` |
+| `hybrid-auditor` | — | `Authentication`, `Identity.DirectoryManagement` |
+| `defender-auditor` | `Az.Accounts`, `Az.Security` | — |
+| `policy-auditor` | `Az.Accounts`, `Az.Resources` | — |
+| `backup-auditor` | `Az.Accounts`, `Az.RecoveryServices` | — |
+
+> Graph module names are prefixed with `Microsoft.Graph.` — e.g. `Authentication` = `Microsoft.Graph.Authentication`.
 
 ---
 
@@ -68,14 +131,15 @@ Use `Run-Audit.ps1` at the repo root to run all Azure auditors in one command:
 
 ---
 
-## Usage
+## Individual Script Usage
 
 All scripts share the same interface:
 
 ```powershell
-.\nsg_auditor.ps1                          # Audit current subscription, all formats
+.\nsg_auditor.ps1                          # Audit current subscription, all output formats
 .\nsg_auditor.ps1 -AllSubscriptions        # Audit all accessible subscriptions
 .\nsg_auditor.ps1 -Format html             # HTML output only
+.\nsg_auditor.ps1 -Format json             # JSON only
 .\nsg_auditor.ps1 -Output my_report        # Custom output file prefix
 .\nsg_auditor.ps1 -Format stdout           # Print JSON to console
 ```
@@ -90,7 +154,9 @@ Each run produces (with `-Format all`, the default):
 |--------|------|----------|
 | JSON | `<prefix>.json` | Machine-readable findings with severity and CIS control mapping |
 | CSV | `<prefix>.csv` | One row per finding, importable to Excel/SIEM |
-| HTML | `<prefix>.html` | Colour-coded report with summary cards |
+| HTML | `<prefix>.html` | Colour-coded per-pillar report with summary cards |
+
+The orchestrator (`Run-Audit.ps1`) additionally generates `exec_summary.html` — a single consolidated executive report across all pillars.
 
 All output files are created with owner-only permissions (mode 600).
 

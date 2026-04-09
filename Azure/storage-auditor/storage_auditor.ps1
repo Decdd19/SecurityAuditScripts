@@ -309,7 +309,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     if ($AllSubscriptions) {
         $subscriptions = Get-AzSubscription
     } else {
-        $subscriptions = @(Get-AzSubscription -SubscriptionId $azContext.Subscription.Id)
+        $subscriptions = if ($azContext.Subscription) { @(Get-AzSubscription -SubscriptionId $azContext.Subscription.Id) } else { @(Get-AzSubscription) }
     }
 
     $allFindings     = [System.Collections.Generic.List[PSCustomObject]]::new()
@@ -329,10 +329,10 @@ if ($MyInvocation.InvocationName -ne '.') {
         findings     = $allFindings
         summary      = @{
             total    = $allFindings.Count
-            critical = ($allFindings | Where-Object Severity -eq 'CRITICAL').Count
-            high     = ($allFindings | Where-Object Severity -eq 'HIGH').Count
-            medium   = ($allFindings | Where-Object Severity -eq 'MEDIUM').Count
-            low      = ($allFindings | Where-Object Severity -eq 'LOW').Count
+            critical = @($allFindings | Where-Object Severity -eq 'CRITICAL').Count
+            high     = @($allFindings | Where-Object Severity -eq 'HIGH').Count
+            medium   = @($allFindings | Where-Object Severity -eq 'MEDIUM').Count
+            low      = @($allFindings | Where-Object Severity -eq 'LOW').Count
         }
     }
 

@@ -301,9 +301,12 @@ function Invoke-Audit {
             $allResults.Add($result)
         }
     } else {
-        $sub    = [PSCustomObject]@{ Id = $ctx.Subscription.Id; Name = $ctx.Subscription.Name }
-        $result = Get-DefenderFindings -Subscription $sub
-        $allResults.Add($result)
+        $azSub = if ($ctx.Subscription) { $ctx.Subscription } else { Get-AzSubscription | Select-Object -First 1 }
+        if ($azSub) {
+            $sub    = [PSCustomObject]@{ Id = $azSub.Id; Name = $azSub.Name }
+            $result = Get-DefenderFindings -Subscription $sub
+            $allResults.Add($result)
+        }
     }
 
     return @{
@@ -334,9 +337,13 @@ if ($MyInvocation.InvocationName -ne '.') {
     }
 
     if ($Format -in @('json','all')) {
-        $jsonReport = ConvertTo-JsonReport -Results $results -TenantId $tenantId
-        $jsonPath   = "$Output.json"
-        $jsonReport | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Encoding utf8
+        $jsonPath = "$Output.json"
+        if ($results.Count -gt 0) {
+            $jsonReport = ConvertTo-JsonReport -Results $results -TenantId $tenantId
+            $jsonReport | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Encoding utf8
+        } else {
+            @{ generated_at = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC'); tenant_id = $tenantId; findings = @(); summary = @{ total = 0; critical = 0; high = 0; medium = 0; low = 0 } } | ConvertTo-Json -Depth 5 | Out-File -FilePath $jsonPath -Encoding utf8
+        }
         Write-Host "JSON report: $jsonPath"
     }
 

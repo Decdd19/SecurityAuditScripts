@@ -204,7 +204,7 @@ foreach ($Auditor in $RunList) {
     # Build argument list
     $ScriptArgs = @('-NonInteractive', '-File', $ScriptPath,
                     '-Output', $OutputPrefix,
-                    '-Format', 'json')
+                    '-Format', 'all')
 
     if ($AllSubscriptions -and $Auditor.AllSubs) {
         $ScriptArgs += '-AllSubscriptions'

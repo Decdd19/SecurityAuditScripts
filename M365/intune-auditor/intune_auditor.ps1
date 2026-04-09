@@ -307,11 +307,11 @@ Write-Host "Tenant ID: $tenantId"
 try {
     Get-MgDeviceManagementDeviceCompliancePolicy -Top 1 -ErrorAction Stop | Out-Null
 } catch {
-    if ($_.Exception.Message -match '403|Forbidden|Unauthorized|AccessDenied') {
+    if ($_.Exception.Message -match '403|Forbidden|Unauthorized|AccessDenied|Authentication needed') {
         Write-Warning "Intune not licensed on this tenant — skipping IN-01 through IN-05."
         $noLicense = [PSCustomObject]@{
             FindingType    = 'IntuneNotLicensed'
-            Severity       = 'INFO'
+            Severity       = 'LOW'
             Resource       = if ($TenantDomain) { $TenantDomain } else { $tenantId }
             Detail         = 'Microsoft Intune is not provisioned on this tenant. Intune requires M365 Business Premium or an E3/E5 + Intune add-on licence.'
             Recommendation = 'Consider upgrading to M365 Business Premium to enable device compliance and Conditional Access enforcement.'

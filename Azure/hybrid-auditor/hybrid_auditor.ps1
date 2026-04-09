@@ -94,7 +94,7 @@ function Get-HybridCloudOnlyGuard {
             FindingType    = 'CloudOnlyTenant'
             Resource       = 'tenant'
             Score          = 0
-            Severity       = 'INFO'
+            Severity       = 'LOW'
             CisControl     = 'N/A'
             Recommendation = 'This tenant has no on-premises directory sync configured. ' +
                              'Hybrid Identity checks (AAD Connect sync status, PHS, password writeback) are not applicable. ' +

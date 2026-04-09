@@ -352,7 +352,8 @@ if ($MyInvocation.InvocationName -ne '.') {
         ) -NoWelcome
     }
 
-    $tenantId    = (Get-MgContext).TenantId ?? 'unknown'
+    $mgCtx       = Get-MgContext
+    $tenantId    = if ($mgCtx) { $mgCtx.TenantId } else { 'unknown' }
     $timestamp   = Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC'
     $allFindings = [System.Collections.Generic.List[PSCustomObject]]::new()
 

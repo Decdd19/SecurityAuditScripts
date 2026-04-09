@@ -217,6 +217,14 @@ RISK_COLOURS = {
     "UNKNOWN": "#6c757d",   # grey — pillar unverifiable (e.g. SSH without sudo)
 }
 
+# FindingTypes that indicate a resource is not licensed / not applicable on this tenant.
+# Pillars where ALL findings are NA types are displayed separately with a grey "N/A" badge
+# so clients understand why nothing was scanned rather than assuming it passed.
+NA_FINDING_TYPES = {
+    "CloudOnlyTenant",
+    "IntuneNotLicensed",
+}
+
 
 def load_report(path):
     """Load a JSON report file. Returns dict or None on error."""
@@ -298,6 +306,18 @@ def compute_pillar_stats(pillar_name, report):
         if findings and na_count / len(findings) > 0.5:
             pillar_risk = "UNKNOWN"
 
+    # Detect not-applicable pillars: all findings are informational NA types (not licensed, not relevant)
+    def _finding_type(f):
+        return f.get("finding_type") or f.get("FindingType") or ""
+
+    na_findings = [f for f in findings if _finding_type(f) in NA_FINDING_TYPES]
+    is_not_applicable = bool(findings) and len(na_findings) == len(findings)
+    na_reason = ""
+    if is_not_applicable:
+        first = na_findings[0]
+        na_reason = (first.get("recommendation") or first.get("Recommendation")
+                     or first.get("detail") or first.get("Detail") or "")
+
     return {
         "pillar": pillar_name,
         "label": PILLAR_LABELS.get(pillar_name, pillar_name.upper()),
@@ -308,6 +328,8 @@ def compute_pillar_stats(pillar_name, report):
         "total": len(findings),
         "pillar_risk": pillar_risk,
         "generated_at": report.get("generated_at", ""),
+        "not_applicable": is_not_applicable,
+        "na_reason": na_reason,
     }
 
 
@@ -390,12 +412,24 @@ def write_html(overall_score, grade, pillar_stats, top_findings, quick_wins,
     is_capped = bool(grade_note)
     total_modules = len(FULL_LINUX_AUDIT_MODULES)
 
-    # Pillar cards — with inline dot legend per card
+    # Pillar cards — split into assessed and not-applicable
     pillar_cards_html = ""
+    na_cards_html = ""
     for ps in pillar_stats:
-        risk = ps["pillar_risk"]
-        colour = RISK_COLOURS.get(risk, "#6c757d")
-        pillar_cards_html += f"""
+        if ps.get("not_applicable"):
+            reason = ps["na_reason"]
+            short_reason = (reason[:110] + "…") if len(reason) > 110 else reason
+            na_cards_html += (
+                f'<div class="pillar-card pillar-na">'
+                f'<div class="pillar-name">{html_lib.escape(ps["label"])}</div>'
+                f'<div class="pillar-risk" style="color:#6c757d">NOT APPLICABLE</div>'
+                f'<div class="pillar-na-reason">{html_lib.escape(short_reason)}</div>'
+                f'</div>'
+            )
+        else:
+            risk = ps["pillar_risk"]
+            colour = RISK_COLOURS.get(risk, "#6c757d")
+            pillar_cards_html += f"""
         <div class="pillar-card" style="border-left:5px solid {colour}">
           <div class="pillar-name">{html_lib.escape(ps['label'])}</div>
           <div class="pillar-risk" style="color:{colour}">{risk}</div>
@@ -633,6 +667,9 @@ def write_html(overall_score, grade, pillar_stats, top_findings, quick_wins,
   .warn-section {{ background:#fff8e1; border-left:4px solid #ffc107; margin:0 40px 20px; padding:16px 20px; border-radius:0 8px 8px 0; box-shadow:0 2px 8px rgba(0,0,0,.06); }}
   .warn-section h3 {{ margin:0 0 10px; color:#856404; font-size:0.95em; }}
   .warn-item {{ font-size:0.85em; color:#533f03; padding:3px 0; }}
+  .pillar-na {{ border-left:5px solid #adb5bd !important; opacity:0.75; }}
+  .pillar-na-reason {{ font-size:0.76em; color:#6c757d; margin-top:6px; font-style:italic; line-height:1.35; }}
+  .na-section-label {{ font-size:0.8em; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:0.8px; margin:20px 0 8px; width:100%; }}
   .crit-callout {{ border-top:3px solid #dc3545; }}
   .crit-callout h2 {{ color:#dc3545; border-color:#dc354533; }}
   .crit-items {{ display:flex; flex-direction:column; gap:12px; }}
@@ -678,7 +715,10 @@ def write_html(overall_score, grade, pillar_stats, top_findings, quick_wins,
 {warnings_html}
 <div class="section">
   <h2>Security Posture by Pillar</h2>
-  <div class="pillars">{pillar_cards_html}</div>
+  <div class="pillars">
+    {pillar_cards_html}
+    {('<div class="na-section-label">Not Applicable / Not Licensed</div>' + na_cards_html) if na_cards_html else ''}
+  </div>
 </div>
 
 <div class="score-zone">
