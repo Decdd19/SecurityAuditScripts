@@ -333,7 +333,10 @@ $tenantId = if ($ctx -and $ctx.Tenant) { $ctx.Tenant.Id } else { '' }
 Write-Host "Hybrid Identity Auditor"
 Write-Host "Tenant ID: $tenantId"
 
-Connect-MgGraph -Scopes 'Organization.Read.All','OnPremDirectorySynchronization.Read.All' -NoWelcome
+$mgCtx = $null; try { $mgCtx = Get-MgContext } catch { }
+if (-not $mgCtx) {
+    Connect-MgGraph -Scopes 'Organization.Read.All','OnPremDirectorySynchronization.Read.All' -NoWelcome
+}
 
 $allFindings = [System.Collections.Generic.List[PSCustomObject]]::new()
 

@@ -325,7 +325,10 @@ $tenantId = if ($ctx -and $ctx.Tenant) { $ctx.Tenant.Id } else { '' }
 Write-Host "Defender for Endpoint Auditor"
 Write-Host "Tenant ID: $tenantId"
 
-Connect-MgGraph -Scopes 'DeviceManagementManagedDevices.Read.All','DeviceManagementConfiguration.Read.All' -NoWelcome
+$mgCtx = $null; try { $mgCtx = Get-MgContext } catch { }
+if (-not $mgCtx) {
+    Connect-MgGraph -Scopes 'DeviceManagementManagedDevices.Read.All','DeviceManagementConfiguration.Read.All' -NoWelcome
+}
 
 $allFindings = [System.Collections.Generic.List[PSCustomObject]]::new()
 

@@ -412,24 +412,16 @@ def write_html(overall_score, grade, pillar_stats, top_findings, quick_wins,
     is_capped = bool(grade_note)
     total_modules = len(FULL_LINUX_AUDIT_MODULES)
 
-    # Pillar cards — split into assessed and not-applicable
+    # Pillar cards — assessed pillars only; N/A pillars go to a separate section
     pillar_cards_html = ""
-    na_cards_html = ""
+    na_rows_html = ""
+    na_pillars = [ps for ps in pillar_stats if ps.get("not_applicable")]
     for ps in pillar_stats:
         if ps.get("not_applicable"):
-            reason = ps["na_reason"]
-            short_reason = (reason[:110] + "…") if len(reason) > 110 else reason
-            na_cards_html += (
-                f'<div class="pillar-card pillar-na">'
-                f'<div class="pillar-name">{html_lib.escape(ps["label"])}</div>'
-                f'<div class="pillar-risk" style="color:#6c757d">NOT APPLICABLE</div>'
-                f'<div class="pillar-na-reason">{html_lib.escape(short_reason)}</div>'
-                f'</div>'
-            )
-        else:
-            risk = ps["pillar_risk"]
-            colour = RISK_COLOURS.get(risk, "#6c757d")
-            pillar_cards_html += f"""
+            continue
+        risk = ps["pillar_risk"]
+        colour = RISK_COLOURS.get(risk, "#6c757d")
+        pillar_cards_html += f"""
         <div class="pillar-card" style="border-left:5px solid {colour}">
           <div class="pillar-name">{html_lib.escape(ps['label'])}</div>
           <div class="pillar-risk" style="color:{colour}">{risk}</div>
@@ -450,6 +442,15 @@ def write_html(overall_score, grade, pillar_stats, top_findings, quick_wins,
             f'<div class="pillar-risk" style="color:#adb5bd">NOT RUN</div>'
             f'<div class="pillar-total" style="color:#adb5bd">Auditor ran but no report found</div>'
             f'</div>'
+        )
+    # Build N/A section rows
+    for ps in na_pillars:
+        reason = html_lib.escape(ps["na_reason"]) if ps["na_reason"] else "Not applicable on this tenant."
+        na_rows_html += (
+            f'<tr>'
+            f'<td><strong>{html_lib.escape(ps["label"])}</strong></td>'
+            f'<td>{reason}</td>'
+            f'</tr>\n'
         )
 
     # Top findings table rows
@@ -667,9 +668,12 @@ def write_html(overall_score, grade, pillar_stats, top_findings, quick_wins,
   .warn-section {{ background:#fff8e1; border-left:4px solid #ffc107; margin:0 40px 20px; padding:16px 20px; border-radius:0 8px 8px 0; box-shadow:0 2px 8px rgba(0,0,0,.06); }}
   .warn-section h3 {{ margin:0 0 10px; color:#856404; font-size:0.95em; }}
   .warn-item {{ font-size:0.85em; color:#533f03; padding:3px 0; }}
-  .pillar-na {{ border-left:5px solid #adb5bd !important; opacity:0.75; }}
-  .pillar-na-reason {{ font-size:0.76em; color:#6c757d; margin-top:6px; font-style:italic; line-height:1.35; }}
-  .na-section-label {{ font-size:0.8em; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:0.8px; margin:20px 0 8px; width:100%; }}
+  .na-section {{ background:#f8f9fa; border-left:4px solid #adb5bd; margin:0 40px 24px; padding:16px 20px; border-radius:0 8px 8px 0; box-shadow:0 2px 8px rgba(0,0,0,.06); }}
+  .na-section h3 {{ margin:0 0 4px; color:#495057; font-size:0.95em; }}
+  .na-section p {{ margin:0 0 12px; color:#6c757d; font-size:0.82em; }}
+  .na-section table {{ box-shadow:none; background:transparent; margin:0; }}
+  .na-section td {{ font-size:0.85em; color:#495057; border-bottom:1px solid #e9ecef; padding:8px 10px; }}
+  .na-section td:first-child {{ font-weight:600; white-space:nowrap; width:220px; }}
   .crit-callout {{ border-top:3px solid #dc3545; }}
   .crit-callout h2 {{ color:#dc3545; border-color:#dc354533; }}
   .crit-items {{ display:flex; flex-direction:column; gap:12px; }}
@@ -709,17 +713,19 @@ def write_html(overall_score, grade, pillar_stats, top_findings, quick_wins,
 <body>
 <div class="header">
   {client_meta_html}
-  <p style="color:#aaa;margin:8px 0 0;font-size:0.85em">Generated: {html_lib.escape(generated_at)} &nbsp;|&nbsp; {len(pillar_stats)} pillar{'s' if len(pillar_stats) != 1 else ''} analysed</p>
+  <p style="color:#aaa;margin:8px 0 0;font-size:0.85em">Generated: {html_lib.escape(generated_at)} &nbsp;|&nbsp; {len(pillar_stats) - len(na_pillars)} pillar{'s' if (len(pillar_stats) - len(na_pillars)) != 1 else ''} assessed{(' &nbsp;|&nbsp; ' + str(len(na_pillars)) + ' not assessed (see below)') if na_pillars else ''}</p>
 </div>
 {scope_section_html}
 {warnings_html}
 <div class="section">
   <h2>Security Posture by Pillar</h2>
-  <div class="pillars">
-    {pillar_cards_html}
-    {('<div class="na-section-label">Not Applicable / Not Licensed</div>' + na_cards_html) if na_cards_html else ''}
-  </div>
+  <div class="pillars">{pillar_cards_html}</div>
 </div>
+{('''<div class="na-section">
+  <h3>&#128683; Services Not Assessed</h3>
+  <p>The following services were not scanned because the required licence or configuration was not detected on this tenant. These are not failures — they are included here so the scope of this assessment is fully transparent.</p>
+  <table><tbody>''' + na_rows_html + '''</tbody></table>
+</div>''') if na_rows_html else ''}
 
 <div class="score-zone">
   <div class="score-gauge">{overall_score}</div>
