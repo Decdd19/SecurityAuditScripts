@@ -450,10 +450,13 @@ if ($MyInvocation.InvocationName -ne '.') {
     $tenantId = $azContext.Tenant.Id
 
     # Connect to Microsoft Graph if not already connected
-    try {
-        $null = Get-MgContext -ErrorAction Stop
-    } catch {
-        Connect-MgGraph -Scopes 'UserAuthenticationMethod.Read.All', 'RoleManagement.Read.Directory' -NoWelcome
+    $mgCtx = $null; try { $mgCtx = Get-MgContext } catch { }
+    if (-not $mgCtx) {
+        if ($env:AUDIT_TENANT_ID) {
+            Connect-MgGraph -TenantId $env:AUDIT_TENANT_ID -NoWelcome
+        } else {
+            Connect-MgGraph -Scopes 'UserAuthenticationMethod.Read.All','RoleManagement.Read.Directory' -NoWelcome
+        }
     }
 
     if ($AllSubscriptions) {

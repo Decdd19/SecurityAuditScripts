@@ -335,7 +335,11 @@ Write-Host "Tenant ID: $tenantId"
 
 $mgCtx = $null; try { $mgCtx = Get-MgContext } catch { }
 if (-not $mgCtx) {
-    Connect-MgGraph -Scopes 'Organization.Read.All','OnPremDirectorySynchronization.Read.All' -NoWelcome
+    if ($env:AUDIT_TENANT_ID) {
+        Connect-MgGraph -TenantId $env:AUDIT_TENANT_ID -NoWelcome
+    } else {
+        Connect-MgGraph -Scopes 'Organization.Read.All','OnPremDirectorySynchronization.Read.All' -NoWelcome
+    }
 }
 
 $allFindings = [System.Collections.Generic.List[PSCustomObject]]::new()

@@ -313,7 +313,11 @@ if ($MyInvocation.InvocationName -ne '.') {
     $mgContext = $null
     try { $mgContext = Get-MgContext } catch { }
     if (-not $mgContext) {
-        Connect-MgGraph -Scopes 'UserAuthenticationMethod.Read.All', 'RoleManagement.Read.Directory'
+        if ($env:AUDIT_TENANT_ID) {
+            Connect-MgGraph -TenantId $env:AUDIT_TENANT_ID -NoWelcome
+        } else {
+            Connect-MgGraph -Scopes 'UserAuthenticationMethod.Read.All','RoleManagement.Read.Directory' -NoWelcome
+        }
     }
 
     if ($AllSubscriptions) {

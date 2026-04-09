@@ -345,14 +345,15 @@ if ($MyInvocation.InvocationName -ne '.') {
         }
     }
 
-    try { $null = Get-MgContext -ErrorAction Stop } catch {
-        Connect-MgGraph -Scopes @(
-            'Policy.Read.All',
-            'Directory.Read.All'
-        ) -NoWelcome
+    $mgCtx = $null; try { $mgCtx = Get-MgContext } catch { }
+    if (-not $mgCtx) {
+        if ($env:AUDIT_TENANT_ID) {
+            Connect-MgGraph -TenantId $env:AUDIT_TENANT_ID -NoWelcome
+        } else {
+            Connect-MgGraph -Scopes 'Policy.Read.All','Directory.Read.All' -NoWelcome
+        }
+        $mgCtx = $null; try { $mgCtx = Get-MgContext } catch { }
     }
-
-    $mgCtx       = Get-MgContext
     $tenantId    = if ($mgCtx) { $mgCtx.TenantId } else { 'unknown' }
     $timestamp   = Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC'
     $allFindings = [System.Collections.Generic.List[PSCustomObject]]::new()
