@@ -49,6 +49,8 @@ $required | ForEach-Object {
 
 One Graph authentication prompt is required. The token is cached to disk (~1 hour lifetime) so you will only be prompted on the first run of the day or after token expiry.
 
+> **Linux note:** On Linux, each auditor script runs in an isolated child process. You may see 1–3 additional browser prompts during the run depending on whether MSAL's token cache is shared across processes (requires libsecret / GNOME keyring or a writable `~/.local/share/.IdentityService/` path). This is a known Linux limitation and does not affect Windows. The prompts are harmless.
+
 ```powershell
 Connect-MgGraph -Scopes `
     'User.Read.All','Directory.Read.All','Policy.Read.All',

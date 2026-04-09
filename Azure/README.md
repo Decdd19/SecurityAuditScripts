@@ -55,6 +55,8 @@ $required | ForEach-Object {
 
 Two authentication prompts are required — one for Azure Resource Manager, one for Microsoft Graph. Both token caches are saved to disk (~1 hour lifetime), so you will only be prompted on the first run of the day or after token expiry.
 
+> **Linux note:** On Linux, each auditor script runs in an isolated child process. Depending on whether MSAL's token cache can be shared across processes (requires libsecret / GNOME keyring or a writable `~/.local/share/.IdentityService/` path), you may see 2–4 additional browser prompts during the run. This is a known limitation of the multi-process architecture on Linux and does not affect Windows, where DPAPI-based token caching is cross-process reliable. The prompts are harmless — just authenticate and the run continues.
+
 ```powershell
 # Azure Resource Manager (required for all Az.* auditors)
 Connect-AzAccount
