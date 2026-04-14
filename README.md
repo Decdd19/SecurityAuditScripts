@@ -208,7 +208,9 @@ Each auditor produces JSON + CSV + HTML output and maps findings to CIS v8 Contr
 
 | Script | What it does |
 |--------|--------------|
-| [Executive Summary](./tools/) | Aggregates all JSON reports → HTML report with score 0–100, pillar cards, top findings, quick wins |
+| [Executive Summary](./tools/) | Aggregates all JSON reports → HTML report with score 0–100, pillar cards, top findings, quick wins, compound attack paths |
+| [Correlations](./tools/correlations.py) | 15 cross-pillar compound risk rules (CP-01–CP-15) — fires when 2+ finding types co-occur to surface attack paths invisible to per-pillar scoring |
+| [MITRE Map](./tools/mitre_map.py) | Maps 67 finding types to MITRE ATT&CK tactics and techniques — auto-enriched into findings, rendered as badges in the exec summary |
 
 ---
 
@@ -233,6 +235,8 @@ Each auditor produces JSON + CSV + HTML output and maps findings to CIS v8 Contr
 - Scripts are **read-only** — no changes are made to your environment
 - Output files are created with owner-only permissions (mode 600)
 - All JSON findings include a `cis_control` field mapped to CIS v8 Controls
+- 67 finding types are auto-enriched with MITRE ATT&CK tactic and technique references (rendered as badges in the exec summary)
+- The exec summary detects 15 cross-pillar compound attack paths (credential theft, lateral movement, ransomware, data exfiltration, AD takeover, etc.) — risks invisible to per-pillar scoring
 - AWS/Linux scripts output to current directory unless `--output` is set; PowerShell scripts default to a timestamped client folder
 - AWS scripts support `--profile` and `--regions`; Azure scripts support `-AllSubscriptions`
 
