@@ -69,7 +69,7 @@ def check_imds(metadata_options):
 
 
 def check_ebs_encryption(ec2_client, block_device_mappings):
-    """Return list of unencrypted volume IDs attached to this instance."""
+    """Return list of unencrypted volume IDs, or None if the check could not run."""
     unencrypted = []
     vol_ids = [
         m["Ebs"]["VolumeId"]
@@ -83,9 +83,10 @@ def check_ebs_encryption(ec2_client, block_device_mappings):
         for vol in resp.get("Volumes", []):
             if not vol.get("Encrypted", False):
                 unencrypted.append(vol["VolumeId"])
+        return unencrypted
     except ClientError as e:
         log.warning(f"Could not describe volumes {vol_ids}: {e}")
-    return unencrypted
+        return None  # UNKNOWN — not the same as "all volumes encrypted"
 
 
 def check_public_snapshots(ec2_client):
@@ -176,7 +177,12 @@ def analyse_instance(ec2_client, instance, default_vpc_id=None, account_public_s
     # EBS encryption
     bdm = instance.get("BlockDeviceMappings", [])
     unencrypted_vols = check_ebs_encryption(ec2_client, bdm)
-    if unencrypted_vols:
+    if unencrypted_vols is None:
+        flags.append("⚠️ UNKNOWN — could not verify EBS volume encryption (API error)")
+        remediations.append(
+            "Check IAM permissions allow ec2:DescribeVolumes to audit EBS encryption status"
+        )
+    elif unencrypted_vols:
         flags.append(f"❌ Unencrypted EBS volume(s): {', '.join(unencrypted_vols)}")
         remediations.append(
             "Encrypt EBS volumes: create an encrypted snapshot of each volume, "
@@ -219,7 +225,7 @@ def analyse_instance(ec2_client, instance, default_vpc_id=None, account_public_s
         flags.append("✅ IMDSv2 enforced")
     if not has_public_ip:
         flags.append("✅ No public IP")
-    if not unencrypted_vols:
+    if unencrypted_vols is not None and not unencrypted_vols:
         flags.append("✅ All EBS volumes encrypted")
     if has_instance_profile:
         flags.append("✅ IAM instance profile attached")
@@ -227,7 +233,7 @@ def analyse_instance(ec2_client, instance, default_vpc_id=None, account_public_s
     score, risk_level = calculate_score(
         no_imds_v2=not imds_v2_required,
         public_ip=has_public_ip,
-        unencrypted_volumes=unencrypted_vols,
+        unencrypted_volumes=unencrypted_vols if unencrypted_vols is not None else True,
         no_instance_profile=no_instance_profile,
         hop_limit_high=hop_limit_high,
         in_default_vpc=in_default_vpc,

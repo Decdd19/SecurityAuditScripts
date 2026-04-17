@@ -148,9 +148,12 @@ def get_available_updates(pm):
                     packages.append(parts[2] if len(parts) > 2 else parts[1])
         sec_stdout, _ = run_command(['zypper', '--non-interactive', 'list-patches',
                                      '--category', 'security'])
-        sec_count = sum(1 for line in sec_stdout.splitlines()
-                        if '|' in line and not line.startswith('+-'))
-        return len(packages), max(sec_count - 1, 0), packages[:20]  # -1 for header
+        sec_count = sum(
+            1 for line in sec_stdout.splitlines()
+            if line.startswith('|') and not line.startswith('+-')
+            and line.split('|')[1].strip() not in ('', 'Repository', 'Name')
+        )
+        return len(packages), sec_count, packages[:20]
 
     return 0, 0, []
 

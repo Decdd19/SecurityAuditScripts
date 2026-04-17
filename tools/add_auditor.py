@@ -31,7 +31,7 @@ LINUX_STUB_TEMPLATE = '''\
 #!/usr/bin/env python3
 """
 Linux {title} Auditor
-{"=" * (len("Linux {title} Auditor") + 1)}
+{{"=" * (len("Linux {title} Auditor") + 1)}}
 TODO: describe what this auditor checks.
 
 Usage:
@@ -189,7 +189,7 @@ GENERIC_STUB_TEMPLATE = '''\
 #!/usr/bin/env python3
 """
 {title} Auditor
-{"=" * (len("{title} Auditor") + 1)}
+{{"=" * (len("{title} Auditor") + 1)}}
 TODO: describe what this auditor checks.
 
 Usage:
@@ -321,23 +321,14 @@ def add_to_audit_py(auditor_key, script_path, output_prefix):
         f'"{output_prefix}", False),\n'
     )
 
-    # Insert before the closing `}` of AUDITOR_MAP — find `\n}` after the last entry
-    # Look for the last entry pattern and insert after it
-    pattern = r'(# ── [A-Za-z]+ ──[^\n]*\n(?:    "[^"]+":.*\n)+)'
-    matches = list(re.finditer(pattern, content))
-    if not matches:
-        print(f"  [WARN] Could not locate AUDITOR_MAP sections in audit.py — add manually:")
+    marker = '    # @@AUDITOR_MAP_END@@'
+    idx = content.find(marker)
+    if idx == -1:
+        print(f"  [WARN] @@AUDITOR_MAP_END@@ marker not found in audit.py — add manually:")
         print(f"         {new_entry.strip()}")
         return
 
-    # Find the closing brace of AUDITOR_MAP
-    map_end = content.find('\n}\n', matches[-1].end())
-    if map_end == -1:
-        print(f"  [WARN] Could not find end of AUDITOR_MAP — add manually:")
-        print(f"         {new_entry.strip()}")
-        return
-
-    new_content = content[:map_end + 1] + new_entry + content[map_end + 1:]
+    new_content = content[:idx] + new_entry + content[idx:]
     audit_py.write_text(new_content)
     print(f"  [UPDATE] audit.py — added key '{auditor_key}'")
 
@@ -352,14 +343,14 @@ def add_to_exec_summary(output_prefix):
         print(f"  [SKIP] exec_summary.py already has '{output_prefix}.json'")
         return
 
-    # Insert before the closing `]` of KNOWN_PATTERNS
-    idx = content.find('\n]\n', content.find('KNOWN_PATTERNS'))
+    marker = '    # @@KNOWN_PATTERNS_END@@'
+    idx = content.find(marker)
     if idx == -1:
-        print(f"  [WARN] Could not locate KNOWN_PATTERNS end — add manually:")
+        print(f"  [WARN] @@KNOWN_PATTERNS_END@@ marker not found in exec_summary.py — add manually:")
         print(f"         {pattern_entry},")
         return
 
-    new_content = content[:idx] + f'\n{pattern_entry},' + content[idx:]
+    new_content = content[:idx] + f'{pattern_entry},\n' + content[idx:]
     exec_py.write_text(new_content)
     print(f"  [UPDATE] exec_summary.py — added '{output_prefix}.json'")
 

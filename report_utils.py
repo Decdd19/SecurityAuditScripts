@@ -1,11 +1,25 @@
 """
-Shared CSS generator for SecurityAuditScripts HTML reports.
+Shared utilities for SecurityAuditScripts HTML reports and auditor helpers.
 
 Each auditor's write_html() calls get_styles() and embeds the result inline.
 HTML output remains a fully standalone single-file document — no external deps.
 
 To update brand tokens: change BRAND here. Everywhere picks it up on next run.
 """
+
+from botocore.exceptions import ClientError
+
+
+def client_error_unknown_flag(check_name: str, err: ClientError) -> str:
+    """Return a standardised UNKNOWN flag string for an inaccessible API check.
+
+    Use when a ClientError (e.g. AccessDenied) prevents a security check from
+    completing.  The caller should emit this as a warning flag rather than
+    silently returning False (which implies the check passed).
+    """
+    code = err.response.get("Error", {}).get("Code", "Unknown")
+    return f"⚠️ UNKNOWN — could not verify {check_name} ({code})"
+
 
 BRAND = {
     "dark":         "#1a1a2e",  # header, th backgrounds

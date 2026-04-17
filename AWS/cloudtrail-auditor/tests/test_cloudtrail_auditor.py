@@ -121,10 +121,11 @@ def test_check_s3_bucket_public():
     assert ct.check_s3_bucket_public(s3, "my-bucket") is True
 
 
-def test_check_s3_bucket_public_client_error_returns_false():
+def test_check_s3_bucket_public_client_error_returns_none():
+    # AccessDenied / any unexpected error → UNKNOWN (None), not False (which implies "not public")
     s3 = MagicMock()
-    s3.get_public_access_block.side_effect = _client_error("NoSuchPublicAccessBlockConfiguration")
-    assert ct.check_s3_bucket_public(s3, "my-bucket") is False
+    s3.get_public_access_block.side_effect = _client_error("AccessDenied")
+    assert ct.check_s3_bucket_public(s3, "my-bucket") is None
 
 
 # ── analyse_trail ─────────────────────────────────────────────────────────────
@@ -316,3 +317,36 @@ def test_write_csv_includes_remediations_column(tmp_path):
         reader = csv_module.DictReader(f)
         headers = reader.fieldnames
     assert "remediations" in headers
+
+
+# ── UNKNOWN behaviour (AccessDenied → None sentinel) ──────────────────────────
+
+def test_check_s3_bucket_public_access_denied_returns_none():
+    s3 = MagicMock()
+    s3.get_public_access_block.side_effect = _client_error("AccessDenied")
+    assert ct.check_s3_bucket_public(s3, "trail-bucket") is None
+
+
+def test_analyse_trail_s3_bucket_access_denied_emits_unknown_flag():
+    """When S3 public check returns None (AccessDenied), trail analysis must emit UNKNOWN flag."""
+    mock_ct = _make_ct_client(is_logging=True)
+    s3 = MagicMock()
+    s3.get_public_access_block.side_effect = _client_error("AccessDenied")
+
+    result = ct.analyse_trail(mock_ct, s3, FULLY_CONFIGURED_TRAIL)
+
+    unknown_flags = [f for f in result["flags"] if "UNKNOWN" in f]
+    assert len(unknown_flags) >= 1
+    # Must NOT claim the bucket is publicly accessible (false negative avoided separately)
+    assert not any("publicly accessible!" in f for f in result["flags"])
+
+
+def test_analyse_trail_s3_bucket_access_denied_has_remediation():
+    """UNKNOWN flag for S3 bucket must include a paired remediation."""
+    mock_ct = _make_ct_client(is_logging=True)
+    s3 = MagicMock()
+    s3.get_public_access_block.side_effect = _client_error("AccessDenied")
+
+    result = ct.analyse_trail(mock_ct, s3, FULLY_CONFIGURED_TRAIL)
+    warning_flags = [f for f in result["flags"] if not f.startswith("✅")]
+    assert len(result["remediations"]) == len(warning_flags)

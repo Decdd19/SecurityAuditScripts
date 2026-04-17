@@ -154,6 +154,7 @@ _MANUAL_AUDITOR_MAP: Dict[str, AuditorDef] = {
         supports_regions=False,
         requires_domain=True,
     ),
+    # @@AUDITOR_MAP_END@@
 }
 
 # Build final AUDITOR_MAP: auto-discovered entries + manual overrides.

@@ -95,7 +95,8 @@ def detect_backend():
 # ── Firewall checks per backend ───────────────────────────────────────────────
 
 def check_iptables(findings):
-    out, rc = run_command(['iptables', '-L', '-n', '--line-numbers'])
+    # -v gives structured columns: pkts bytes target prot opt in out source destination [extensions]
+    out, rc = run_command(['iptables', '-L', '-n', '-v'])
 
     # Check default INPUT policy
     if 'Chain INPUT (policy ACCEPT)' in out:
@@ -108,31 +109,39 @@ def check_iptables(findings):
             'cis_control': 'CIS 12',
         })
 
-    # Check for -j ACCEPT with 0.0.0.0/0 as both source and destination (allow-all rule)
-    if re.search(r'ACCEPT\s+\w+\s+--\s+0\.0\.0\.0/0\s+0\.0\.0\.0/0', out):
-        findings.append({
-            'finding_type': 'AllowAllInputRule',
-            'detail': 'An iptables ACCEPT rule allows all traffic from 0.0.0.0/0 to 0.0.0.0/0.',
-            'score': 9,
-            'severity': severity_label(9),
-            'recommendation': 'Remove broad ACCEPT rules and replace with specific port/source allowances.',
-            'cis_control': 'CIS 12',
-        })
+    # Parse rule lines by field position (cols: pkts bytes target prot opt in out src dst [ext...])
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) < 9:
+            continue
+        target, prot, src, dst = parts[2], parts[3], parts[7], parts[8]
+        ext = ' '.join(parts[9:]) if len(parts) > 9 else ''
 
-    # Check for dangerous ports open to all
-    for port, (svc, score) in DANGEROUS_PORTS.items():
-        pattern = rf'ACCEPT\s+tcp\s+--\s+(?:anywhere|0\.0\.0\.0/0)\s+(?:anywhere|0\.0\.0\.0/0)\s+.*(?:dpt:{port}|:{port}\s)'
-        if re.search(pattern, out):
+        # Check for allow-all rule: ACCEPT with 0.0.0.0/0 as both source and destination
+        if target == 'ACCEPT' and src == '0.0.0.0/0' and dst.startswith('0.0.0.0/0') and not ext:
             findings.append({
-                'finding_type': 'DangerousPortOpenToAll',
-                'detail': f'iptables allows unrestricted inbound access to port {port} ({svc}).',
-                'score': score,
-                'severity': severity_label(score),
-                'recommendation': f'Restrict port {port} ({svc}) to known source IPs or remove the rule.',
-                'port': port,
-                'service': svc,
+                'finding_type': 'AllowAllInputRule',
+                'detail': 'An iptables ACCEPT rule allows all traffic from 0.0.0.0/0 to 0.0.0.0/0.',
+                'score': 9,
+                'severity': severity_label(9),
+                'recommendation': 'Remove broad ACCEPT rules and replace with specific port/source allowances.',
                 'cis_control': 'CIS 12',
             })
+
+        # Check for dangerous ports open to all
+        if target == 'ACCEPT' and prot == 'tcp' and src == '0.0.0.0/0':
+            for port, (svc, score) in DANGEROUS_PORTS.items():
+                if f'dpt:{port}' in ext or ext.rstrip().endswith(f':{port}'):
+                    findings.append({
+                        'finding_type': 'DangerousPortOpenToAll',
+                        'detail': f'iptables allows unrestricted inbound access to port {port} ({svc}).',
+                        'score': score,
+                        'severity': severity_label(score),
+                        'recommendation': f'Restrict port {port} ({svc}) to known source IPs or remove the rule.',
+                        'port': port,
+                        'service': svc,
+                        'cis_control': 'CIS 12',
+                    })
 
     # Check ip6tables
     out6, _ = run_command(['ip6tables', '-L', '-n'])
@@ -434,7 +443,7 @@ def write_html(report, path):
 
 # ── Main audit function ───────────────────────────────────────────────────────
 
-def audit(output_prefix='fw_report', fmt='all'):
+def run(output_prefix='fw_report', fmt='all'):
     hostname = run_command(['hostname'])[0].strip() or 'unknown'
     findings = []
 
@@ -536,4 +545,4 @@ if __name__ == '__main__':
     parser.add_argument('--output', '-o', default='fw_report', help='Output file prefix (default: fw_report)')
     parser.add_argument('--format', '-f', choices=['json', 'csv', 'html', 'all', 'stdout'], default='all', help='Output format (default: all)')
     args = parser.parse_args()
-    audit(output_prefix=args.output, fmt=args.format)
+    run(output_prefix=args.output, fmt=args.format)

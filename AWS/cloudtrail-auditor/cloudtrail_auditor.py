@@ -32,7 +32,7 @@ from botocore.exceptions import ClientError
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from report_utils import get_styles
+from report_utils import get_styles, client_error_unknown_flag
 
 BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
@@ -132,8 +132,9 @@ def check_s3_bucket_public(s3, bucket_name):
             config.get("RestrictPublicBuckets", False),
         ])
         return not all_blocked
-    except ClientError:
-        return False
+    except ClientError as e:
+        log.warning(f"Could not check public access block for trail bucket {bucket_name}: {e}")
+        return None  # UNKNOWN — not the same as "not public"
 
 
 # ── Analyse trail ─────────────────────────────────────────────────────────────
@@ -205,11 +206,16 @@ def analyse_trail(ct, s3, trail):
             "Enable global service events: CloudTrail Console → Trails → "
             "select trail → Edit → Include global service events → Yes"
         )
-    if s3_public:
+    if s3_public is True:
         flags.append("❌ Trail S3 bucket is publicly accessible!")
         remediations.append(
             "Block public access on the log bucket immediately: "
             "S3 Console → select bucket → Permissions → Block all public access → Edit → enable all"
+        )
+    elif s3_public is None:
+        flags.append("⚠️ UNKNOWN — could not verify if trail S3 bucket is publicly accessible (API error)")
+        remediations.append(
+            "Check IAM permissions allow s3:GetBucketPublicAccessBlock on the trail log bucket"
         )
     if not has_management:
         flags.append("⚠️ Management events not captured")

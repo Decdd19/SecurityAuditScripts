@@ -22,6 +22,7 @@ import html as html_lib
 import http.client
 import json
 import logging
+import re
 import socket
 import sys
 from datetime import datetime, timezone
@@ -156,10 +157,11 @@ def check_x_content_type_options(conn: dict) -> dict:
 # ── HDR-03: Content-Security-Policy ──────────────────────────────────────────
 
 _WEAK_CSP = frozenset({"'unsafe-inline'", "'unsafe-eval'"})
+_WILDCARD_DEFAULT = re.compile(r'(?:^|;)\s*default-src\s+\*', re.IGNORECASE)
 
 
 def check_content_security_policy(conn: dict) -> dict:
-    """HDR-03: CSP must be present and not contain unsafe directives."""
+    """HDR-03: CSP must be present and not contain unsafe or wildcard directives."""
     val = conn.get("headers", {}).get("content-security-policy", "").strip()
     if not val:
         return _finding(
@@ -176,6 +178,19 @@ def check_content_security_policy(conn: dict) -> dict:
             "which weakens XSS protection.",
             "Remove 'unsafe-inline' and 'unsafe-eval'. "
             "Use nonces or hashes for inline scripts instead.",
+        )
+    if _WILDCARD_DEFAULT.search(val):
+        return _finding(
+            "HDR-03", "Content-Security-Policy", "WARN", "HIGH", 0,
+            "Content-Security-Policy uses 'default-src *' which allows resources from any origin.",
+            "Replace wildcard default-src with an explicit allowlist, e.g. 'default-src \\'self\\''.",
+        )
+    if 'frame-ancestors' not in val.lower():
+        return _finding(
+            "HDR-03", "Content-Security-Policy", "WARN", "MEDIUM", 0,
+            "Content-Security-Policy is present but missing the 'frame-ancestors' directive. "
+            "X-Frame-Options alone is deprecated in modern browsers.",
+            "Add 'frame-ancestors \\'self\\'' to the CSP to control iframe embedding.",
         )
     return _finding(
         "HDR-03", "Content-Security-Policy", "PASS", "HIGH", 0,

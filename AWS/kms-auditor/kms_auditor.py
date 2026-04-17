@@ -187,15 +187,19 @@ def build_flags(key_enabled, key_state, rotation_enabled, rotation_applicable,
 
 # ── Analyse key ───────────────────────────────────────────────────────────────
 
-def analyse_key(kms, key_id, key_arn, region):
-    """Audit a single customer-managed KMS key and return a finding dict."""
+def analyse_key(kms, key_id, key_arn, region, meta=None):
+    """Audit a single customer-managed KMS key and return a finding dict.
+
+    Pass `meta` (already-fetched KeyMetadata) to avoid a redundant describe_key call.
+    """
     log.info(f"  Key: {key_id} ({region})")
 
-    try:
-        meta = kms.describe_key(KeyId=key_id)["KeyMetadata"]
-    except ClientError as e:
-        log.warning(f"Could not describe key {key_id}: {e}")
-        return None
+    if meta is None:
+        try:
+            meta = kms.describe_key(KeyId=key_id)["KeyMetadata"]
+        except ClientError as e:
+            log.warning(f"Could not describe key {key_id}: {e}")
+            return None
 
     # Skip AWS-managed keys (should already be filtered, but guard here too)
     if meta.get("KeyManager") == "AWS":
@@ -406,7 +410,7 @@ def run(output_prefix="kms_report", fmt="all", profile=None, regions=None):
                     key_id = key_entry["KeyId"]
                     key_arn = key_entry["KeyArn"]
 
-                    # Quick pre-check: skip AWS-managed keys by describing first
+                    # Describe once; pass meta to analyse_key to avoid a second call
                     try:
                         meta = kms.describe_key(KeyId=key_id)["KeyMetadata"]
                     except ClientError as e:
@@ -417,7 +421,7 @@ def run(output_prefix="kms_report", fmt="all", profile=None, regions=None):
                         log.info(f"  Skipping AWS-managed key: {key_id}")
                         continue
 
-                    finding = analyse_key(kms, key_id, key_arn, region)
+                    finding = analyse_key(kms, key_id, key_arn, region, meta=meta)
                     if finding:
                         findings.append(finding)
 

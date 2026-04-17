@@ -34,8 +34,6 @@ import dns.exception
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger(__name__)
 
-NOW = datetime.now(timezone.utc)
-
 # DKIM selectors to probe in order (M365-first for Irish SMB market)
 DKIM_SELECTORS = [
     "selector1", "selector2", "google", "default", "mail", "k1",
@@ -503,6 +501,7 @@ def write_html(report: dict, prefix: str) -> None:
 
 def run(domain: str, selector: Optional[str], output_prefix: str, fmt: str) -> dict:
     """Run all email security checks for domain and write reports."""
+    NOW = datetime.now(timezone.utc)
     findings = run_all_checks(domain, selector)
     overall_risk, score = compute_overall_risk(findings)
 

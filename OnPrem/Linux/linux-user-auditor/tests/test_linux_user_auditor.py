@@ -381,7 +381,7 @@ def _make_audit_patches(
     run_command_rv=None,
     get_file_stat_rv=None,
 ):
-    """Return a context-manager stack of patches suitable for calling lua.audit()."""
+    """Return a context-manager stack of patches suitable for calling lua.run()."""
     from contextlib import ExitStack
     passwd_data = passwd_data or []
     shadow_data = shadow_data or {}
@@ -427,7 +427,7 @@ class _FakePath:
 
 def test_audit_returns_dict():
     with _make_audit_patches():
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     assert isinstance(report, dict)
     assert 'findings' in report
     assert 'summary' in report
@@ -438,7 +438,7 @@ def test_audit_flags_empty_password_hash():
     passwd_data = [{'username': 'baduser', 'uid': 1001, 'gid': 1001,
                     'home': '/home/baduser', 'shell': '/bin/bash'}]
     with _make_audit_patches(passwd_data=passwd_data, shadow_data=shadow_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'EmptyPasswordHash' in types
 
@@ -449,7 +449,7 @@ def test_audit_flags_uid_zero_non_root():
         {'username': 'toor', 'uid': 0, 'gid': 0, 'home': '/root', 'shell': '/bin/bash'},
     ]
     with _make_audit_patches(passwd_data=passwd_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     uid_zero = [f for f in report['findings'] if f['finding_type'] == 'UidZeroNonRoot']
     assert len(uid_zero) == 1
     assert uid_zero[0]['username'] == 'toor'
@@ -458,7 +458,7 @@ def test_audit_flags_uid_zero_non_root():
 def test_audit_flags_direct_root_ssh():
     ssh_cfg = {'permitrootlogin': 'yes'}
     with _make_audit_patches(ssh_cfg=ssh_cfg):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'DirectRootSSH' in types
 
@@ -466,7 +466,7 @@ def test_audit_flags_direct_root_ssh():
 def test_audit_no_direct_root_ssh_when_prohibit_password():
     ssh_cfg = {'permitrootlogin': 'prohibit-password'}
     with _make_audit_patches(ssh_cfg=ssh_cfg):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'DirectRootSSH' not in types
 
@@ -474,7 +474,7 @@ def test_audit_no_direct_root_ssh_when_prohibit_password():
 def test_audit_flags_ssh_password_auth_when_yes():
     ssh_cfg = {'passwordauthentication': 'yes'}
     with _make_audit_patches(ssh_cfg=ssh_cfg):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'SSHPasswordAuthEnabled' in types
 
@@ -483,7 +483,7 @@ def test_audit_flags_ssh_password_auth_when_not_set():
     # Default is yes — should still be flagged
     ssh_cfg = {}
     with _make_audit_patches(ssh_cfg=ssh_cfg):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'SSHPasswordAuthEnabled' in types
 
@@ -491,7 +491,7 @@ def test_audit_flags_ssh_password_auth_when_not_set():
 def test_audit_no_ssh_password_auth_when_no():
     ssh_cfg = {'passwordauthentication': 'no'}
     with _make_audit_patches(ssh_cfg=ssh_cfg):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'SSHPasswordAuthEnabled' not in types
 
@@ -502,7 +502,7 @@ def test_audit_flags_passwordless_root_equivalent():
          'nopasswd': True, 'all_commands': True},
     ]
     with _make_audit_patches(sudoers_data=sudoers_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'PasswordlessRootEquivalent' in types
 
@@ -513,7 +513,7 @@ def test_audit_flags_sudo_all_commands_with_password():
          'nopasswd': False, 'all_commands': True},
     ]
     with _make_audit_patches(sudoers_data=sudoers_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'SudoAllCommandsGranted' in types
 
@@ -524,7 +524,7 @@ def test_audit_flags_sudo_nopasswd_specific_commands():
          'nopasswd': True, 'all_commands': False},
     ]
     with _make_audit_patches(sudoers_data=sudoers_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'SudoAllNopasswd' in types
 
@@ -532,7 +532,7 @@ def test_audit_flags_sudo_nopasswd_specific_commands():
 def test_audit_flags_no_password_expiry_from_login_defs():
     login_defs_data = {'PASS_MAX_DAYS': '99999', 'PASS_MIN_LEN': '12'}
     with _make_audit_patches(login_defs_data=login_defs_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'NoPasswordExpiry' in types
 
@@ -544,7 +544,7 @@ def test_audit_no_password_expiry_finding_when_set():
                     'home': '/home/alice', 'shell': '/bin/bash'}]
     with _make_audit_patches(passwd_data=passwd_data, shadow_data=shadow_data,
                               login_defs_data=login_defs_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'NoPasswordExpiry' not in types
 
@@ -552,7 +552,7 @@ def test_audit_no_password_expiry_finding_when_set():
 def test_audit_flags_weak_password_policy():
     login_defs_data = {'PASS_MIN_LEN': '6', 'PASS_MAX_DAYS': '90'}
     with _make_audit_patches(login_defs_data=login_defs_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'WeakPasswordPolicy' in types
 
@@ -560,7 +560,7 @@ def test_audit_flags_weak_password_policy():
 def test_audit_no_weak_password_flag_when_length_ok():
     login_defs_data = {'PASS_MIN_LEN': '14', 'PASS_MAX_DAYS': '90'}
     with _make_audit_patches(login_defs_data=login_defs_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     types = [f['finding_type'] for f in report['findings']]
     assert 'WeakPasswordPolicy' not in types
 
@@ -570,7 +570,7 @@ def test_audit_summary_counts_match():
     passwd_data = [{'username': 'baduser', 'uid': 1001, 'gid': 1001,
                     'home': '/home/baduser', 'shell': '/bin/bash'}]
     with _make_audit_patches(passwd_data=passwd_data, shadow_data=shadow_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     s = report['summary']
     total = s['critical'] + s['high'] + s['medium'] + s['low']
     assert total == s['total_findings']
@@ -583,7 +583,7 @@ def test_audit_findings_sorted_by_score_descending():
     ]
     ssh_cfg = {'permitrootlogin': 'yes'}
     with _make_audit_patches(sudoers_data=sudoers_data, ssh_cfg=ssh_cfg):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     scores = [f['score'] for f in report['findings']]
     assert scores == sorted(scores, reverse=True)
 
@@ -595,13 +595,13 @@ def test_audit_users_scanned_count():
         {'username': 'bob', 'uid': 1001, 'gid': 1001, 'home': '/home/bob', 'shell': '/bin/bash'},
     ]
     with _make_audit_patches(passwd_data=passwd_data):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     assert report['summary']['users_scanned'] == 3
 
 
 def test_audit_hostname_in_report():
     with _make_audit_patches(run_command_rv=('myserver\n', 0)):
-        report = lua.audit(fmt='stdout')
+        report = lua.run(fmt='stdout')
     assert report['hostname'] == 'myserver'
 
 

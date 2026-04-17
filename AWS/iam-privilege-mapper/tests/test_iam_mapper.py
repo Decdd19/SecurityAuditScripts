@@ -4,6 +4,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import iam_mapper_v2 as iam_mapper
+from unittest.mock import MagicMock
 
 
 def test_write_html_includes_remediation_for_mfa_warning(tmp_path):
@@ -170,3 +171,54 @@ def test_build_iam_flags_parallel_lengths():
     }
     flags, rems = iam_mapper._build_iam_flags(f)
     assert len(flags) == len(rems), "flags and remediations lists must be the same length"
+
+
+# ── analyse_role cross-account detection ──────────────────────────────────────
+
+def _make_iam_for_role():
+    """Minimal IAM mock for analyse_role — returns empty policies and no boundary."""
+    iam = MagicMock()
+    iam.list_attached_role_policies.return_value = {"AttachedPolicies": []}
+    iam.list_role_policies.return_value = {"PolicyNames": []}
+    iam.get_role_policy.return_value = {"PolicyDocument": {"Statement": []}}
+    iam.get_role_policy.side_effect = None
+    iam.list_role_tags.return_value = {"Tags": []}
+    return iam
+
+
+def _role_with_trust(principal_arn):
+    return {
+        "RoleName": "MyRole",
+        "Arn": "arn:aws:iam::111111111111:role/MyRole",
+        "AssumeRolePolicyDocument": {
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"AWS": principal_arn},
+                "Action": "sts:AssumeRole",
+            }]
+        },
+    }
+
+
+def test_analyse_role_same_account_not_cross_account():
+    """Role that trusts a principal in the SAME account must NOT be flagged cross-account."""
+    iam = _make_iam_for_role()
+    role = _role_with_trust("arn:aws:iam::111111111111:role/TrusterRole")
+    result = iam_mapper.analyse_role(iam, role, set(), own_account="111111111111")
+    assert result["cross_account_trust"] is False
+
+
+def test_analyse_role_different_account_is_cross_account():
+    """Role that trusts a principal in a DIFFERENT account must be flagged cross-account."""
+    iam = _make_iam_for_role()
+    role = _role_with_trust("arn:aws:iam::999999999999:role/ExternalRole")
+    result = iam_mapper.analyse_role(iam, role, set(), own_account="111111111111")
+    assert result["cross_account_trust"] is True
+
+
+def test_analyse_role_own_account_none_falls_back_to_any_iam_arn():
+    """When own_account is None (STS unavailable), any IAM ARN in trust = cross-account."""
+    iam = _make_iam_for_role()
+    role = _role_with_trust("arn:aws:iam::111111111111:role/SameAccountRole")
+    result = iam_mapper.analyse_role(iam, role, set(), own_account=None)
+    assert result["cross_account_trust"] is True

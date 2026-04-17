@@ -287,40 +287,44 @@ def write_html(report, path):
 
 # ── Stale user helper ─────────────────────────────────────────────────────────
 
-def _parse_lastlog_date(username):
-    """
-    Run lastlog for a single user and return a datetime or None.
-    Returns None if the user has never logged in or if parsing fails.
-    """
-    stdout, rc = run_command(['lastlog', '-u', username])
-    if rc != 0 or not stdout:
+_LASTLOG_DATE_RE = re.compile(
+    r'(\w{3}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(?:[+-]\d{4}\s+)?(\d{4})$'
+)
+
+
+def _parse_lastlog_line(line):
+    """Parse a single lastlog data line. Returns datetime or None."""
+    if 'Never logged in' in line:
         return None
-    lines = stdout.strip().splitlines()
-    # lastlog output: header line + data line
-    if len(lines) < 2:
-        return None
-    data_line = lines[-1]
-    if 'Never logged in' in data_line:
-        return None
-    # Typical format: "username  pts/0  1.2.3.4  Mon Jan  1 12:00:00 +0000 2024"
-    # Try to extract date using regex for the trailing date portion
-    # Format: "DDD MMM DD HH:MM:SS [+ZZZZ] YYYY"
-    m = re.search(
-        r'(\w{3}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(?:[+-]\d{4}\s+)?(\d{4})$',
-        data_line
-    )
+    m = _LASTLOG_DATE_RE.search(line)
     if not m:
         return None
     try:
-        date_str = f"{m.group(1)} {m.group(2)}"
-        return datetime.strptime(date_str, '%a %b %d %H:%M:%S %Y').replace(tzinfo=timezone.utc)
+        return datetime.strptime(f"{m.group(1)} {m.group(2)}", '%a %b %d %H:%M:%S %Y').replace(
+            tzinfo=timezone.utc
+        )
     except ValueError:
         return None
 
 
+def _load_lastlog_table():
+    """Call lastlog once and return {username: datetime_or_None} for all users."""
+    stdout, rc = run_command(['lastlog'])
+    if rc != 0 or not stdout:
+        return {}
+    table = {}
+    for line in stdout.splitlines()[1:]:  # skip header row
+        parts = line.split(None, 1)
+        if not parts:
+            continue
+        username = parts[0]
+        table[username] = _parse_lastlog_line(line)
+    return table
+
+
 # ── Main audit function ───────────────────────────────────────────────────────
 
-def audit(output_prefix='user_report', fmt='all'):
+def run(output_prefix='user_report', fmt='all'):
     hostname = run_command(['hostname'])[0].strip() or 'unknown'
     findings = []
 
@@ -546,12 +550,13 @@ def audit(output_prefix='user_report', fmt='all'):
     # ── Check: StaleUser (score 4) ────────────────────────────────────────────
     inactive_shells = {'/sbin/nologin', '/bin/false', '/usr/sbin/nologin', '/usr/bin/nologin'}
     stale_threshold = NOW - timedelta(days=90)
+    lastlog_table = _load_lastlog_table()
     for u in users:
         if u['uid'] < 1000 or u['username'] == 'nobody':
             continue
         if u['shell'] in inactive_shells:
             continue
-        last_login = _parse_lastlog_date(u['username'])
+        last_login = lastlog_table.get(u['username'])
         if last_login is None:
             continue
         if last_login < stale_threshold:
@@ -690,4 +695,4 @@ if __name__ == '__main__':
     parser.add_argument('--output', '-o', default='user_report')
     parser.add_argument('--format', '-f', choices=['json', 'csv', 'html', 'all', 'stdout'], default='all')
     args = parser.parse_args()
-    audit(output_prefix=args.output, fmt=args.format)
+    run(output_prefix=args.output, fmt=args.format)

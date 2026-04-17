@@ -515,7 +515,7 @@ def run(output_prefix='ssh_report', fmt='all'):
         if fmt in ('csv', 'all'):
             write_csv([], f"{output_prefix}.csv")
         if fmt in ('html', 'all'):
-            html = (
+            html_out = (
                 f'<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
                 f'<title>SSH Security Audit Report</title>'
                 f'<style>{get_styles()}</style></head><body>'
@@ -527,7 +527,7 @@ def run(output_prefix='ssh_report', fmt='all'):
             )
             p = f"{output_prefix}.html"
             with open(p, 'w') as fh:
-                fh.write(html)
+                fh.write(html_out)
             os.chmod(p, 0o600)
             log.info(f"HTML report: {p}")
         if fmt == 'stdout':
@@ -553,6 +553,12 @@ def run(output_prefix='ssh_report', fmt='all'):
     findings.sort(key=_sort_key)
 
     score, risk, criticals, highs, mediums, lows = compute_risk(findings)
+
+    # When >50% of checks are N/A (compliant=None), the audit ran without sudo
+    # and cannot verify most settings. Signal incomplete audit rather than low risk.
+    na_count = sum(1 for f in findings if f.get('compliant') is None)
+    if findings and na_count / len(findings) > 0.5:
+        risk = 'UNKNOWN'
 
     report = {
         'generated_at': NOW.isoformat(),

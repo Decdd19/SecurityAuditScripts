@@ -31,7 +31,7 @@ from botocore.exceptions import ClientError
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from report_utils import get_styles
+from report_utils import get_styles, client_error_unknown_flag
 
 BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 10})
 
@@ -104,8 +104,9 @@ def check_acl(s3, bucket):
             if "AllUsers" in uri or "AuthenticatedUsers" in uri:
                 return True, uri
         return False, None
-    except ClientError:
-        return False, None
+    except ClientError as e:
+        log.warning(f"Could not check ACL for {bucket}: {e}")
+        return None, None  # UNKNOWN — not the same as "not public"
 
 
 def _is_public_principal(principal):
@@ -139,9 +140,10 @@ def check_bucket_policy(s3, bucket):
                 is_public = True
         return is_public, findings, doc
     except ClientError as e:
-        if e.response["Error"]["Code"] in ("NoSuchBucketPolicy", "AccessDenied"):
-            return False, [], {}
-        return False, [], {}
+        if e.response["Error"]["Code"] == "NoSuchBucketPolicy":
+            return False, [], {}  # Legitimately no policy
+        log.warning(f"Could not check bucket policy for {bucket}: {e}")
+        return None, None, None  # UNKNOWN — not the same as "no public policy"
 
 
 def check_encryption(s3, bucket):
@@ -156,8 +158,9 @@ def check_encryption(s3, bucket):
         return False, None, None
     except ClientError as e:
         if e.response["Error"]["Code"] == "ServerSideEncryptionConfigurationNotFoundError":
-            return False, None, None
-        return False, None, None
+            return False, None, None  # Legitimately no encryption configured
+        log.warning(f"Could not check encryption for {bucket}: {e}")
+        return None, None, None  # UNKNOWN — not the same as "not encrypted"
 
 
 def check_versioning(s3, bucket):
@@ -166,8 +169,9 @@ def check_versioning(s3, bucket):
         status = resp.get("Status", "Disabled")
         mfa_delete = resp.get("MFADelete", "Disabled")
         return status == "Enabled", status, mfa_delete
-    except ClientError:
-        return False, "Unknown", "Unknown"
+    except ClientError as e:
+        log.warning(f"Could not check versioning for {bucket}: {e}")
+        return None, "Unknown", "Unknown"  # UNKNOWN — not the same as "disabled"
 
 
 def check_logging(s3, bucket):
@@ -176,8 +180,9 @@ def check_logging(s3, bucket):
         logging_enabled = "LoggingEnabled" in resp
         target = resp.get("LoggingEnabled", {}).get("TargetBucket", None)
         return logging_enabled, target
-    except ClientError:
-        return False, None
+    except ClientError as e:
+        log.warning(f"Could not check logging for {bucket}: {e}")
+        return None, None  # UNKNOWN — not the same as "logging disabled"
 
 
 def check_lifecycle(s3, bucket):
@@ -216,45 +221,61 @@ def analyse_bucket(s3, bucket_name):
     has_lifecycle, lifecycle_count = check_lifecycle(s3, bucket_name)
 
     block_check_failed = block_config is None
-    is_public = acl_public or policy_public or not all_blocked
+    # Use `is True` so that None (UNKNOWN) does NOT count as public — but UNKNOWN flags are added below
+    is_public = (acl_public is True) or (policy_public is True) or (not all_blocked if block_config is not None else False)
 
     flags = []
     remediations = []
     if block_check_failed:
         flags.append("⚠️ Could not verify Block Public Access configuration (API error)")
         remediations.append("Check IAM permissions allow s3:GetBucketPublicAccessBlock")
-    if acl_public:
+    if acl_public is True:
         flags.append(f"⚠️ Public ACL ({acl_uri})")
         remediations.append("Remove public grants: S3 Console → Permissions → ACL → revoke AllUsers/AuthenticatedUsers grants")
-    if policy_public:
+    elif acl_public is None:
+        flags.append("⚠️ UNKNOWN — could not verify ACL (API error)")
+        remediations.append("Check IAM permissions allow s3:GetBucketAcl")
+    if policy_public is True:
         flags.append("⚠️ Public bucket policy")
         remediations.append('Remove public access: S3 Console → Permissions → Bucket policy → remove or deny "Principal": "*" Allow statements')
+    elif policy_public is None:
+        flags.append("⚠️ UNKNOWN — could not verify bucket policy (API error)")
+        remediations.append("Check IAM permissions allow s3:GetBucketPolicy")
     if not block_check_failed and not all_blocked:
         flags.append("⚠️ Block Public Access not fully enabled")
         remediations.append("Enable all 4 Block Public Access settings: S3 Console → Permissions → Block public access → Edit → enable all")
-    if not encrypted:
+    if encrypted is None:
+        flags.append("⚠️ UNKNOWN — could not verify encryption (API error)")
+        remediations.append("Check IAM permissions allow s3:GetEncryptionConfiguration")
+    elif not encrypted:
         flags.append("⚠️ No encryption at rest")
         remediations.append("Enable default encryption: S3 Console → Properties → Default encryption → SSE-S3 or SSE-KMS")
-    if not versioned:
+    if versioned is None:
+        flags.append("⚠️ UNKNOWN — could not verify versioning (API error)")
+        remediations.append("Check IAM permissions allow s3:GetBucketVersioning")
+    elif not versioned:
         flags.append("⚠️ Versioning disabled")
         remediations.append("Enable versioning: S3 Console → Properties → Bucket Versioning → Enable")
-    if not logging_on:
+    if logging_on is None:
+        flags.append("⚠️ UNKNOWN — could not verify access logging (API error)")
+        remediations.append("Check IAM permissions allow s3:GetBucketLogging")
+    elif not logging_on:
         flags.append("⚠️ Access logging disabled")
         remediations.append("Enable server access logging: S3 Console → Properties → Server access logging → Enable")
-    if encrypted and enc_algo == "AES256":
+    if encrypted is True and enc_algo == "AES256":
         flags.append("ℹ️ SSE-S3 (consider KMS for stronger control)")
         remediations.append("Upgrade to SSE-KMS: S3 Console → Properties → Default encryption → SSE-KMS → choose a CMK for stronger key control")
     # NOTE: ✅ (positive) flags are appended last with no matching remediations.
     # The HTML renderer's fallback (flags_list[len(rems_list):]) depends on this ordering.
     # If adding a new ✅ flag, always append it after all ⚠️/ℹ️/❌ flags.
-    if encrypted and kms_key:
+    if encrypted is True and kms_key:
         flags.append("✅ KMS encryption")
     if mfa_delete == "Enabled":
         flags.append("✅ MFA Delete enabled")
 
     score, risk_level = calculate_score(
-        is_public, not encrypted, not versioned,
-        not logging_on, policy_public, not all_blocked
+        is_public, encrypted is not True, versioned is not True,
+        logging_on is not True, policy_public is True, not all_blocked if block_config is not None else False
     )
 
     return {
@@ -275,7 +296,7 @@ def analyse_bucket(s3, bucket_name):
         "logging_enabled": logging_on,
         "log_target_bucket": log_target,
         "lifecycle_rules": lifecycle_count,
-        "policy_findings": policy_findings,
+        "policy_findings": policy_findings or [],
         "flags": flags,
         "remediations": remediations,
         "cis_control": "CIS 3",

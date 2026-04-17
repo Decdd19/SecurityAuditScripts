@@ -25,6 +25,7 @@ import json
 import csv
 import argparse
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 from datetime import datetime, timezone
 from botocore.config import Config
@@ -95,32 +96,45 @@ def check_auto_minor_version_upgrade(db):
     return db.get("AutoMinorVersionUpgrade", False) is True
 
 
+def _is_snapshot_public(rds_client, snap_id):
+    """Return snap_id if publicly restorable, else None."""
+    try:
+        attr_resp = rds_client.describe_db_snapshot_attributes(DBSnapshotIdentifier=snap_id)
+        attrs = attr_resp.get("DBSnapshotAttributesResult", {}).get("DBSnapshotAttributes", [])
+        for attr in attrs:
+            if attr.get("AttributeName") == "restore" and "all" in attr.get("AttributeValues", []):
+                return snap_id
+    except ClientError as e:
+        log.warning(f"Could not describe snapshot attributes for {snap_id}: {e}")
+    return None
+
+
 def check_public_snapshots(rds_client, db_identifier):
-    """Return list of snapshot IDs that are publicly restorable."""
-    public_snaps = []
+    """Return list of snapshot IDs that are publicly restorable.
+
+    Uses ThreadPoolExecutor to parallelise describe_db_snapshot_attributes calls
+    and avoid the N+1 sequential API pattern.
+    """
     try:
         resp = rds_client.describe_db_snapshots(
             DBInstanceIdentifier=db_identifier,
             SnapshotType="manual",
         )
-        for snap in resp.get("DBSnapshots", []):
-            snap_id = snap["DBSnapshotIdentifier"]
-            try:
-                attr_resp = rds_client.describe_db_snapshot_attributes(
-                    DBSnapshotIdentifier=snap_id
-                )
-                attrs = attr_resp.get("DBSnapshotAttributesResult", {}).get(
-                    "DBSnapshotAttributes", []
-                )
-                for attr in attrs:
-                    if attr.get("AttributeName") == "restore" and "all" in attr.get(
-                        "AttributeValues", []
-                    ):
-                        public_snaps.append(snap_id)
-            except ClientError as e:
-                log.warning(f"Could not describe snapshot attributes for {snap_id}: {e}")
     except ClientError as e:
         log.warning(f"Could not describe snapshots for {db_identifier}: {e}")
+        return []
+
+    snap_ids = [s["DBSnapshotIdentifier"] for s in resp.get("DBSnapshots", [])]
+    if not snap_ids:
+        return []
+
+    public_snaps = []
+    with ThreadPoolExecutor(max_workers=min(10, len(snap_ids))) as pool:
+        futures = {pool.submit(_is_snapshot_public, rds_client, sid): sid for sid in snap_ids}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                public_snaps.append(result)
     return public_snaps
 
 

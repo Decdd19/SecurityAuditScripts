@@ -294,7 +294,7 @@ def audit_region(session, region):
     }
 
 
-def audit(session, regions=None):
+def run(session, regions=None):
     """Run GuardDuty audit across specified regions. Returns report dict."""
     if regions is None:
         regions = AWS_REGIONS
@@ -476,7 +476,7 @@ def main():
     session = boto3.Session(profile_name=args.profile)
     regions = args.regions or AWS_REGIONS
 
-    report = audit(session, regions)
+    report = run(session, regions)
 
     if args.format == "stdout":
         print(json.dumps(report, indent=2, default=str))

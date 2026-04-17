@@ -274,3 +274,44 @@ def test_write_html_creates_file_with_600_perms(tmp_path):
     assert (tmp_path / "test.html").exists()
     mode = (tmp_path / "test.html").stat().st_mode & 0o777
     assert mode == 0o600
+
+
+# ── UNKNOWN behaviour (ClientError → None sentinel) ───────────────────────────
+
+def test_check_ebs_encryption_client_error_returns_none():
+    """ClientError on describe_volumes → None (UNKNOWN), not [] (appears safe)."""
+    volumes = [{"Ebs": {"VolumeId": "vol-1", "DeleteOnTermination": True}}]
+    ec2_client = MagicMock()
+    ec2_client.describe_volumes.side_effect = _client_error("AccessDenied")
+    result = ec2.check_ebs_encryption(ec2_client, volumes)
+    assert result is None
+
+
+def test_analyse_instance_ebs_unknown_emits_unknown_flag():
+    """When EBS check returns None, analyse_instance must emit an UNKNOWN flag."""
+    instance = dict(RUNNING_INSTANCE)
+    instance["BlockDeviceMappings"] = [{"Ebs": {"VolumeId": "vol-x", "DeleteOnTermination": True}}]
+    ec2_client = MagicMock()
+    ec2_client.describe_volumes.side_effect = _client_error("AccessDenied")
+
+    result = ec2.analyse_instance(ec2_client, instance, account_public_snapshots=[])
+
+    unknown_flags = [f for f in result["flags"] if "UNKNOWN" in f]
+    assert len(unknown_flags) >= 1
+    assert not any("All EBS volumes encrypted" in f for f in result["flags"])
+
+
+def test_analyse_instance_ebs_unknown_conservative_score():
+    """EBS UNKNOWN should increase severity score vs. confirmed-clean EBS."""
+    instance = dict(RUNNING_INSTANCE)
+    instance["BlockDeviceMappings"] = [{"Ebs": {"VolumeId": "vol-x", "DeleteOnTermination": True}}]
+    ec2_client_unknown = MagicMock()
+    ec2_client_unknown.describe_volumes.side_effect = _client_error("AccessDenied")
+
+    ec2_client_clean = MagicMock()
+    ec2_client_clean.describe_volumes.return_value = {"Volumes": [{"VolumeId": "vol-x", "Encrypted": True}]}
+
+    unknown_result = ec2.analyse_instance(ec2_client_unknown, instance, account_public_snapshots=[])
+    clean_result = ec2.analyse_instance(ec2_client_clean, instance, account_public_snapshots=[])
+
+    assert unknown_result["severity_score"] >= clean_result["severity_score"]

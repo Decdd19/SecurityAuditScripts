@@ -182,10 +182,26 @@ def test_check_x_content_type_options_fail_wrong_value():
 
 def test_check_csp_pass_clean_policy():
     f = hha.check_content_security_policy(
-        make_conn(**{"content-security-policy": "default-src 'self'; script-src 'self'"})
+        make_conn(**{"content-security-policy": "default-src 'self'; script-src 'self'; frame-ancestors 'self'"})
     )
     assert f["check_id"] == "HDR-03"
     assert f["status"] == "PASS"
+
+
+def test_check_csp_warn_missing_frame_ancestors():
+    f = hha.check_content_security_policy(
+        make_conn(**{"content-security-policy": "default-src 'self'; script-src 'self'"})
+    )
+    assert f["status"] == "WARN"
+    assert "frame-ancestors" in f["detail"]
+
+
+def test_check_csp_warn_wildcard_default_src():
+    f = hha.check_content_security_policy(
+        make_conn(**{"content-security-policy": "default-src *; script-src 'self'"})
+    )
+    assert f["status"] == "WARN"
+    assert "default-src *" in f["detail"] or "wildcard" in f["detail"].lower()
 
 
 def test_check_csp_warn_unsafe_inline():

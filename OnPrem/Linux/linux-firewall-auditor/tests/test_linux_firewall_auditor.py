@@ -98,9 +98,10 @@ def test_check_iptables_default_accept_score():
 
 def test_check_iptables_allow_all():
     findings = []
+    # -v format: pkts bytes target prot opt in out source destination [ext]
     iptables_output = (
         'Chain INPUT (policy DROP)\n'
-        'ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0\n'
+        '    0     0 ACCEPT     all  --  *      *       0.0.0.0/0            0.0.0.0/0\n'
     )
     with patch.object(lfa, 'run_command', return_value=(iptables_output, 0)):
         lfa.check_iptables(findings)
@@ -109,7 +110,7 @@ def test_check_iptables_allow_all():
 
 def test_check_iptables_allow_all_score():
     findings = []
-    output = 'Chain INPUT (policy DROP)\nACCEPT     all  --  0.0.0.0/0            0.0.0.0/0\n'
+    output = 'Chain INPUT (policy DROP)\n    0     0 ACCEPT     all  --  *      *       0.0.0.0/0            0.0.0.0/0\n'
     with patch.object(lfa, 'run_command', return_value=(output, 0)):
         lfa.check_iptables(findings)
     match = next(f for f in findings if f['finding_type'] == 'AllowAllInputRule')
@@ -120,7 +121,7 @@ def test_check_iptables_dangerous_port():
     findings = []
     output = (
         'Chain INPUT (policy DROP)\n'
-        'ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0            tcp dpt:3306\n'
+        '    0     0 ACCEPT     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:3306\n'
     )
     with patch.object(lfa, 'run_command', return_value=(output, 0)):
         lfa.check_iptables(findings)
@@ -573,7 +574,7 @@ def test_audit_no_firewall():
          patch.object(lfa, 'run_command', return_value=('testhost', 0)), \
          patch('builtins.open', side_effect=OSError), \
          patch('os.chmod'):
-        report = lfa.audit(fmt='stdout')
+        report = lfa.run(fmt='stdout')
     assert any(f['finding_type'] == 'NoFirewallActive' for f in report['findings'])
 
 
@@ -586,7 +587,7 @@ def test_audit_returns_report_structure():
          patch.object(lfa, 'run_command', return_value=('myhost', 0)), \
          patch('builtins.open', side_effect=OSError), \
          patch('os.chmod'):
-        report = lfa.audit(fmt='stdout')
+        report = lfa.run(fmt='stdout')
     assert 'generated_at' in report
     assert 'hostname' in report
     assert 'firewall_backend' in report
@@ -603,7 +604,7 @@ def test_audit_summary_counts():
          patch.object(lfa, 'run_command', return_value=('host1', 0)), \
          patch('builtins.open', side_effect=OSError), \
          patch('os.chmod'):
-        report = lfa.audit(fmt='stdout')
+        report = lfa.run(fmt='stdout')
     s = report['summary']
     assert s['total'] == len(report['findings'])
     assert s['critical'] + s['high'] + s['medium'] + s['low'] == s['total']
@@ -618,7 +619,7 @@ def test_audit_findings_sorted_by_score_descending():
          patch.object(lfa, 'run_command', return_value=('host', 0)), \
          patch('builtins.open', side_effect=OSError), \
          patch('os.chmod'):
-        report = lfa.audit(fmt='stdout')
+        report = lfa.run(fmt='stdout')
     scores = [f['score'] for f in report['findings']]
     assert scores == sorted(scores, reverse=True)
 
@@ -633,7 +634,7 @@ def test_audit_firewall_backend_recorded():
          patch.object(lfa, 'run_command', return_value=('myhost', 0)), \
          patch('builtins.open', side_effect=OSError), \
          patch('os.chmod'):
-        report = lfa.audit(fmt='stdout')
+        report = lfa.run(fmt='stdout')
     assert report['firewall_backend'] == 'ufw'
 
 
@@ -647,7 +648,7 @@ def test_audit_calls_check_ufw_when_backend_ufw():
          patch.object(lfa, 'run_command', return_value=('host', 0)), \
          patch('builtins.open', side_effect=OSError), \
          patch('os.chmod'):
-        lfa.audit(fmt='stdout')
+        lfa.run(fmt='stdout')
     mock_ufw.assert_called_once()
 
 
@@ -661,7 +662,7 @@ def test_audit_calls_check_iptables_when_backend_iptables():
          patch.object(lfa, 'run_command', return_value=('host', 0)), \
          patch('builtins.open', side_effect=OSError), \
          patch('os.chmod'):
-        lfa.audit(fmt='stdout')
+        lfa.run(fmt='stdout')
     mock_ipt.assert_called_once()
 
 
@@ -675,7 +676,7 @@ def test_audit_calls_check_nftables_when_backend_nftables():
          patch.object(lfa, 'run_command', return_value=('host', 0)), \
          patch('builtins.open', side_effect=OSError), \
          patch('os.chmod'):
-        lfa.audit(fmt='stdout')
+        lfa.run(fmt='stdout')
     mock_nft.assert_called_once()
 
 
@@ -690,7 +691,7 @@ def test_audit_always_calls_ancillary_checks():
          patch.object(lfa, 'run_command', return_value=('host', 0)), \
          patch('builtins.open', side_effect=OSError), \
          patch('os.chmod'):
-        lfa.audit(fmt='stdout')
+        lfa.run(fmt='stdout')
     mock_auditd.assert_called_once()
     mock_syslog.assert_called_once()
     mock_docker.assert_called_once()

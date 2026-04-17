@@ -437,7 +437,7 @@ def analyse_user(iam, user, scp_denied):
     return finding
 
 
-def analyse_role(iam, role, scp_denied):
+def analyse_role(iam, role, scp_denied, own_account=None):
     name = role["RoleName"]
     arn = role["Arn"]
     log.info(f"  Role: {name}")
@@ -478,9 +478,13 @@ def analyse_role(iam, role, scp_denied):
                     items = v if isinstance(v, list) else [v]
                     trust_principals.extend(items)
                     for item in items:
-                        # Cross-account if principal is an ARN from a different account
                         if "arn:aws:iam::" in str(item):
-                            cross_account = True
+                            # Extract account ID from the ARN (field index 4)
+                            parts = str(item).split(":")
+                            principal_account = parts[4] if len(parts) >= 5 else None
+                            # Only flag as cross-account when the account differs from our own
+                            if own_account is None or principal_account != own_account:
+                                cross_account = True
             cond = stmt.get("Condition", {})
             ext = cond.get("StringEquals", {}).get("sts:ExternalId")
             if ext:
@@ -797,7 +801,7 @@ def run(principal_type="all", output_prefix="iam_report", fmt="all", profile=Non
     if principal_type in ("all", "roles"):
         log.info("Enumerating IAM roles...")
         for r in paginate(iam.list_roles, "Roles"):
-            findings.append(analyse_role(iam, r, scp_denied))
+            findings.append(analyse_role(iam, r, scp_denied, own_account=account_id))
 
     if principal_type in ("all", "groups"):
         log.info("Enumerating IAM groups...")

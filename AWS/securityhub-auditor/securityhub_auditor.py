@@ -334,28 +334,27 @@ def write_html(report, path):
           <td style="font-size:0.85em">{flags_html}</td>
         </tr>"""
 
-    extra_css = (
-        "  h1 { color: #212529; font-size: 1.8em; margin: 20px 40px 10px; }\n"
-        "  .card .val { font-size: 2em; font-weight: bold; }\n"
-    )
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Security Hub Audit Report</title>
 <style>
-{get_styles(extra_css)}
+{get_styles()}
 </style>
 </head>
 <body>
-<h1>🛡️ Security Hub Audit Report</h1>
+<div class="header">
+  <h1>🛡️ Security Hub Audit Report</h1>
+  <p>Generated: {html_lib.escape(generated_at)}</p>
+</div>
 <div class="summary">
-  <div class="card"><div class="val">{summary['total_regions']}</div>Regions</div>
-  <div class="card"><div class="val" style="color:#dc3545">{summary['not_enabled']}</div>Not Enabled</div>
-  <div class="card"><div class="val" style="color:#dc3545">{summary['critical']}</div>CRITICAL</div>
-  <div class="card"><div class="val" style="color:#fd7e14">{summary['high']}</div>HIGH</div>
-  <div class="card"><div class="val" style="color:#ffc107">{summary['medium']}</div>MEDIUM</div>
-  <div class="card"><div class="val" style="color:#28a745">{summary['low']}</div>LOW</div>
+  <div class="card"><div class="num">{summary['total_regions']}</div><div class="label">Regions</div></div>
+  <div class="card"><div class="num" style="color:#dc3545">{summary['not_enabled']}</div><div class="label">Not Enabled</div></div>
+  <div class="card"><div class="num" style="color:#dc3545">{summary['critical']}</div><div class="label">CRITICAL</div></div>
+  <div class="card"><div class="num" style="color:#fd7e14">{summary['high']}</div><div class="label">HIGH</div></div>
+  <div class="card"><div class="num" style="color:#ffc107">{summary['medium']}</div><div class="label">MEDIUM</div></div>
+  <div class="card"><div class="num" style="color:#28a745">{summary['low']}</div><div class="label">LOW</div></div>
 </div>
 <table>
 <tr>
@@ -364,7 +363,7 @@ def write_html(report, path):
 </tr>
 {rows}
 </table>
-<div class="footer">Generated: {html_lib.escape(generated_at)} | AWS Security Hub Auditor</div>
+<div class="footer">AWS Security Hub Auditor</div>
 </body>
 </html>"""
 

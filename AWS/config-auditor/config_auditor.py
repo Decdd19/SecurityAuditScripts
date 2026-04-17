@@ -472,8 +472,27 @@ def run(output_prefix="config_report", fmt="all", regions=None, profile=None):
             findings.extend(check_compliance(config_client, region))
 
         except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
+            code = e.response["Error"]["Code"]
+            if code == "AccessDeniedException":
                 log.warning(f"Access denied in region {region}, skipping")
+                continue
+            if code in ("ThrottlingException", "RequestLimitExceeded"):
+                log.warning(f"Throttled in region {region} — partial scan; retry later")
+                findings.append({
+                    "region": region,
+                    "resource": f"config/{region}",
+                    "check": "Config Scan (throttled)",
+                    "status": "UNKNOWN",
+                    "severity": "MEDIUM",
+                    "risk_level": "MEDIUM",
+                    "severity_score": 3,
+                    "description": f"AWS Config scan throttled in {region}; results may be incomplete",
+                    "recommendation": "Re-run audit in this region after a brief delay",
+                    "cis_control": "CIS 3.5",
+                    "remediation": "Re-run audit — transient throttle, not a configuration issue",
+                    "flags": [f"⚠️ Throttled scanning {region} — partial results"],
+                    "remediations": ["Re-run audit after a brief delay to get complete results"],
+                })
                 continue
             log.warning(f"Could not scan region {region}: {e}")
             continue

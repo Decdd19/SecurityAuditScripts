@@ -93,6 +93,7 @@ KNOWN_PATTERNS = [
     "netexpose_report.json",
     # M365 endpoint security
     "mde_report.json",
+    # @@KNOWN_PATTERNS_END@@
 ]
 
 # Azure/Windows patterns that require manual copy-back from a Windows machine.
@@ -313,21 +314,13 @@ def compute_pillar_stats(pillar_name, report):
     else:
         pillar_risk = "LOW"
 
-    # Bug 2 fix: honour the report's own overall_risk classification if more severe
+    # Honour the report's own overall_risk classification if more severe (or UNKNOWN)
     summary_risk = report.get("summary", {}).get("overall_risk", "").upper()
-    if summary_risk in _SEVERITY_RANK:
+    if summary_risk == "UNKNOWN":
+        pillar_risk = "UNKNOWN"
+    elif summary_risk in _SEVERITY_RANK:
         if _SEVERITY_RANK[summary_risk] < _SEVERITY_RANK.get(pillar_risk, 3):
             pillar_risk = summary_risk
-
-    # P1-2: SSH pillar — escalate to UNKNOWN when >50% findings are N/A (no sudo).
-    # N/A findings have compliant=null and are downgraded to LOW, producing a
-    # false-safe signal. UNKNOWN signals "incomplete audit" rather than "low risk".
-    # Only fires when sshd IS installed — if ssh_daemon_installed==False the
-    # auditor returned 0 findings and UNKNOWN must not trigger.
-    if pillar_name == "ssh" and report.get("ssh_daemon_installed", True):
-        na_count = sum(1 for f in findings if f.get("compliant") is None)
-        if findings and na_count / len(findings) > 0.5:
-            pillar_risk = "UNKNOWN"
 
     # Detect not-applicable pillars: all findings are informational NA types (not licensed, not relevant)
     def _finding_type(f):

@@ -403,6 +403,106 @@ def test_analyse_bucket_flagged_has_remediations():
     assert all(len(r) > 0 for r in result["remediations"])
 
 
+# ── UNKNOWN behaviour (AccessDenied → None sentinel) ──────────────────────────
+
+def test_check_acl_access_denied_returns_none():
+    s3 = MagicMock()
+    s3.get_bucket_acl.side_effect = _client_error("AccessDenied")
+    is_public, uri = s3a.check_acl(s3, "bucket")
+    assert is_public is None
+    assert uri is None
+
+
+def test_check_acl_generic_error_returns_none():
+    s3 = MagicMock()
+    s3.get_bucket_acl.side_effect = _client_error("InternalError")
+    is_public, _ = s3a.check_acl(s3, "bucket")
+    assert is_public is None
+
+
+def test_check_bucket_policy_access_denied_returns_none():
+    s3 = MagicMock()
+    s3.get_bucket_policy.side_effect = _client_error("AccessDenied")
+    is_public, findings, doc = s3a.check_bucket_policy(s3, "bucket")
+    assert is_public is None
+    assert findings is None
+
+
+def test_check_bucket_policy_no_such_policy_still_returns_false():
+    s3 = MagicMock()
+    s3.get_bucket_policy.side_effect = _client_error("NoSuchBucketPolicy")
+    is_public, findings, doc = s3a.check_bucket_policy(s3, "bucket")
+    assert is_public is False  # Legitimately no policy — not UNKNOWN
+    assert findings == []
+
+
+def test_check_encryption_access_denied_returns_none():
+    s3 = MagicMock()
+    s3.get_bucket_encryption.side_effect = _client_error("AccessDenied")
+    is_encrypted, algo, key = s3a.check_encryption(s3, "bucket")
+    assert is_encrypted is None
+
+
+def test_check_encryption_not_found_still_returns_false():
+    s3 = MagicMock()
+    s3.get_bucket_encryption.side_effect = _client_error("ServerSideEncryptionConfigurationNotFoundError")
+    is_encrypted, algo, key = s3a.check_encryption(s3, "bucket")
+    assert is_encrypted is False  # Legitimately no encryption — not UNKNOWN
+
+
+def test_check_versioning_client_error_returns_none():
+    s3 = MagicMock()
+    s3.get_bucket_versioning.side_effect = _client_error("AccessDenied")
+    versioned, status, mfa = s3a.check_versioning(s3, "bucket")
+    assert versioned is None
+
+
+def test_check_logging_client_error_returns_none():
+    s3 = MagicMock()
+    s3.get_bucket_logging.side_effect = _client_error("AccessDenied")
+    logging_on, target = s3a.check_logging(s3, "bucket")
+    assert logging_on is None
+
+
+def test_analyse_bucket_access_denied_emits_unknown_flags():
+    """All checks return AccessDenied — analyse_bucket must emit UNKNOWN flags, not false-pass flags."""
+    s3 = MagicMock()
+    s3.get_public_access_block.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_acl.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_policy.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_encryption.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_versioning.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_logging.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_lifecycle_configuration.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_location.return_value = {"LocationConstraint": "eu-west-1"}
+
+    result = s3a.analyse_bucket(s3, "restricted-bucket")
+
+    unknown_flags = [f for f in result["flags"] if "UNKNOWN" in f]
+    assert len(unknown_flags) >= 4, f"Expected >=4 UNKNOWN flags, got: {result['flags']}"
+    # Must not emit false "clean" flags when checks are inaccessible
+    assert not any("✅" in f for f in result["flags"])
+    # Bucket must not appear as "not public" simply because ACL/policy checks failed
+    assert result["is_public"] is False  # Conservative: flag via UNKNOWN, not assume public
+
+
+def test_analyse_bucket_unknown_has_paired_remediations():
+    """Every ⚠️ UNKNOWN flag must have a paired remediation."""
+    s3 = MagicMock()
+    s3.get_public_access_block.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_acl.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_policy.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_encryption.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_versioning.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_logging.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_lifecycle_configuration.side_effect = _client_error("AccessDenied")
+    s3.get_bucket_location.return_value = {"LocationConstraint": "eu-west-1"}
+
+    result = s3a.analyse_bucket(s3, "restricted-bucket")
+    warning_flags = [f for f in result["flags"] if not f.startswith("✅")]
+    assert len(result["remediations"]) == len(warning_flags)
+
+
 def test_write_csv_includes_remediations_column(tmp_path):
     """The CSV output should include a remediations column."""
     import csv as csv_module
